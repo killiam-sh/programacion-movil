@@ -2,7 +2,6 @@ package com.stocksync.error404
 
 import android.content.Context
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -18,15 +17,16 @@ class LeftFragment : Fragment(R.layout.fragment_left) {
 
     private var listener: OnOptionSelectedListener? = null
 
-    fun setOnOptionSelectedListener(listener: OnOptionSelectedListener) {
-        this.listener = listener
-    }
-
     override fun onAttach(context: Context) {
         super.onAttach(context)
         if (context is OnOptionSelectedListener) {
             listener = context
         }
+    }
+
+    override fun onDetach() {
+        listener = null
+        super.onDetach()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -64,13 +64,5 @@ class LeftFragment : Fragment(R.layout.fragment_left) {
         listView.setOnItemClickListener { _, _, position, _ ->
             listener?.onOptionSelected(options[position])
         }
-    }
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_left, container, false)
     }
 }

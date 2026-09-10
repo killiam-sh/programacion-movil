@@ -5,7 +5,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebSettings
@@ -18,11 +17,17 @@ import android.widget.MediaController
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.VideoView
+import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
 
 class RightFragment : Fragment(R.layout.fragment_right) {
 
     private lateinit var contentLayout: LinearLayout
+
+    // Se guardan para poder liberarlos: con solo removeAllViews() el MediaPlayer
+    // del VideoView sigue vivo (el audio continua) y el WebView se filtra.
+    private var videoView: VideoView? = null
+    private var webView: WebView? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -33,6 +38,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
     fun showOption(option: String) {
         if (!::contentLayout.isInitialized) return
 
+        releaseMedia()
         contentLayout.removeAllViews()
 
         when (option) {
@@ -43,6 +49,24 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             "Botones" -> renderButtons()
             else -> renderProfile()
         }
+    }
+
+    private fun releaseMedia() {
+        videoView?.stopPlayback()
+        videoView = null
+
+        webView?.let { web ->
+            web.stopLoading()
+            web.loadUrl("about:blank")
+            (web.parent as? ViewGroup)?.removeView(web)
+            web.destroy()
+        }
+        webView = null
+    }
+
+    override fun onDestroyView() {
+        releaseMedia()
+        super.onDestroyView()
     }
 
     private fun renderProfile() {
@@ -147,25 +171,33 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             text = "Video promocional"
             textSize = 20f
             typeface = Typeface.DEFAULT_BOLD
+            setTextColor(android.graphics.Color.parseColor("#F9F7F5"))
             setPadding(16, 16, 16, 8)
         }
 
-        val videoView = VideoView(requireContext()).apply {
+        val video = VideoView(requireContext()).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 400
             )
         }
+        videoView = video
 
-        val mediaController = MediaController(requireContext())
-        videoView.setMediaController(mediaController)
-        videoView.setVideoURI(
-            Uri.parse("https://www.w3schools.com/html/mov_bbb.mp4")
-        )
-        videoView.start()
+        val mediaController = MediaController(requireContext()).apply {
+            setAnchorView(video)
+        }
+        video.setMediaController(mediaController)
+        video.setVideoURI(Uri.parse("https://www.w3schools.com/html/mov_bbb.mp4"))
+
+        // La preparación es asíncrona: solo se reproduce cuando el medio está listo.
+        video.setOnPreparedListener { it.start() }
+        video.setOnErrorListener { _, _, _ ->
+            title.text = "No se pudo cargar el video. Revisa tu conexión a internet."
+            true
+        }
 
         contentLayout.addView(title)
-        contentLayout.addView(videoView)
+        contentLayout.addView(video)
     }
 
     private fun renderWeb() {
@@ -178,7 +210,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             text = "Cargar página"
         }
 
-        val webView = WebView(requireContext()).apply {
+        val web = WebView(requireContext()).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
@@ -189,20 +221,22 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             webViewClient = WebViewClient()
             loadUrl("https://www.google.com")
         }
+        webView = web
 
         loadButton.setOnClickListener {
             val url = urlInput.text.toString().trim()
+            if (url.isEmpty()) return@setOnClickListener
             val fullUrl = if (url.startsWith("http://") || url.startsWith("https://")) {
                 url
             } else {
                 "https://$url"
             }
-            webView.loadUrl(fullUrl)
+            web.loadUrl(fullUrl)
         }
 
         contentLayout.addView(urlInput)
         contentLayout.addView(loadButton)
-        contentLayout.addView(webView)
+        contentLayout.addView(web)
     }
 
     private fun renderButtons() {
@@ -242,7 +276,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             setOnClickListener { statusText.text = "Enlace compartido" }
         }
 
-        val switchWidget = android.widget.Switch(requireContext()).apply {
+        val switchWidget = SwitchCompat(requireContext()).apply {
             text = "Notificaciones activadas"
             isChecked = true
             setTextColor(android.graphics.Color.parseColor("#E9F3F5"))
@@ -254,13 +288,5 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         contentLayout.addView(shareButton)
         contentLayout.addView(switchWidget)
         contentLayout.addView(statusText)
-    }
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_right, container, false)
     }
 }
