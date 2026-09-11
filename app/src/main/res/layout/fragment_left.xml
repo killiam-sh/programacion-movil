@@ -6,10 +6,13 @@
     android:background="#0B1F2A">
 
     <TextView
+        android:id="@+id/categoriesHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="14dp"
         android:text="Categorías"
+        android:clickable="true"
+        android:focusable="true"
         android:textStyle="bold"
         android:gravity="center"
         android:maxLines="1"

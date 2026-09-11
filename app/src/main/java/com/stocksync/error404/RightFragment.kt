@@ -41,14 +41,65 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         releaseMedia()
         contentLayout.removeAllViews()
 
-        when (option) {
-            "Perfil" -> renderProfile()
-            "Fotos" -> renderPhotos()
-            "Video" -> renderVideo()
-            "Web" -> renderWeb()
-            "Botones" -> renderButtons()
+        when {
+            option == "Perfil" -> renderProfile()
+            option == "Fotos" -> renderPhotos()
+            option == "Video" -> renderVideo()
+            option == "Web" -> renderWeb()
+            option == "Botones" -> renderButtons()
+            option.startsWith("Categoría: ") -> {
+                val catName = option.substringAfter("Categoría: ")
+                renderCategory(catName)
+            }
             else -> renderProfile()
         }
+    }
+
+    private fun renderCategory(category: String) {
+        val products = when (category) {
+            "Electrónica" -> listOf(
+                "Smartwatch" to "$450.000",
+                "Audífonos BT" to "$120.000",
+                "Cargador Rápido" to "$45.000"
+            )
+            "Hogar" -> listOf(
+                "Lámpara LED" to "$85.000",
+                "Cafetera" to "$190.000",
+                "Juego de Sábanas" to "$150.000"
+            )
+            "Moda" -> listOf(
+                "Chaqueta Denim" to "$120.000",
+                "Tenis Urban" to "$210.000",
+                "Gorra Sync" to "$35.000"
+            )
+            else -> listOf("Sin productos" to "-")
+        }
+
+        val title = TextView(requireContext()).apply {
+            text = "Categoría: $category"
+            textSize = 22f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(android.graphics.Color.BLACK)
+            setPadding(16, 16, 16, 16)
+        }
+
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(16, 16, 16, 16)
+        }
+
+        products.forEach { (name, price) ->
+            val item = TextView(requireContext()).apply {
+                text = "• $name - $price"
+                textSize = 18f
+                setTextColor(android.graphics.Color.DKGRAY)
+                setPadding(8, 8, 8, 8)
+            }
+            container.addView(item)
+        }
+
+        contentLayout.addView(title)
+        contentLayout.addView(container)
     }
 
     private fun releaseMedia() {
@@ -82,7 +133,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 "Habilidades: atención al cliente, ventas, investigación de mercado, " +
                 "diseño de contenido, analítica y gestión de campañas."
             textSize = 16f
-            setTextColor(android.graphics.Color.parseColor("#E8F2F6"))
+            setTextColor(android.graphics.Color.parseColor("#000000"))
             setPadding(16, 16, 16, 16)
             movementMethod = ScrollingMovementMethod()
         }
@@ -109,7 +160,6 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         val container = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16, 16, 16, 16)
-            setBackgroundColor(android.graphics.Color.parseColor("#0D2E3A"))
         }
 
         val products = listOf(
@@ -125,7 +175,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding(12, 12, 12, 12)
                 gravity = Gravity.CENTER_VERTICAL
-                setBackgroundColor(android.graphics.Color.parseColor("#113D4D"))
+                setBackgroundColor(android.graphics.Color.parseColor("#EEEEEE"))
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -147,13 +197,13 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 text = title
                 typeface = Typeface.DEFAULT_BOLD
                 textSize = 18f
-                setTextColor(android.graphics.Color.parseColor("#F7F4F1"))
+                setTextColor(android.graphics.Color.parseColor("#000000"))
             }
 
             val descView = TextView(requireContext()).apply {
                 text = description
                 textSize = 14f
-                setTextColor(android.graphics.Color.parseColor("#DFEAEF"))
+                setTextColor(android.graphics.Color.parseColor("#333333"))
             }
 
             info.addView(titleView)
@@ -171,7 +221,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             text = "Video promocional"
             textSize = 20f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(android.graphics.Color.parseColor("#F9F7F5"))
+            setTextColor(android.graphics.Color.parseColor("#000000"))
             setPadding(16, 16, 16, 8)
         }
 
@@ -217,9 +267,11 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 1f
             )
             settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             webViewClient = WebViewClient()
-            loadUrl("https://www.google.com")
+            webChromeClient = android.webkit.WebChromeClient()
+            loadUrl("https://stock-sync-react.vercel.app/")
         }
         webView = web
 
@@ -244,14 +296,14 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             text = "Acciones rápidas"
             textSize = 20f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(android.graphics.Color.parseColor("#F9F7F5"))
+            setTextColor(android.graphics.Color.parseColor("#000000"))
             setPadding(16, 16, 16, 8)
         }
 
         val statusText = TextView(requireContext()).apply {
             text = "Sin acciones por ahora"
             textSize = 16f
-            setTextColor(android.graphics.Color.parseColor("#E5EEF4"))
+            setTextColor(android.graphics.Color.parseColor("#000000"))
             setPadding(16, 16, 16, 16)
         }
 
@@ -272,14 +324,14 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         val shareButton = Button(requireContext()).apply {
             text = "Compartir"
             setBackgroundColor(android.graphics.Color.parseColor("#F0B38A"))
-            setTextColor(android.graphics.Color.parseColor("#1D2B36"))
+            setTextColor(android.graphics.Color.WHITE)
             setOnClickListener { statusText.text = "Enlace compartido" }
         }
 
         val switchWidget = SwitchCompat(requireContext()).apply {
             text = "Notificaciones activadas"
             isChecked = true
-            setTextColor(android.graphics.Color.parseColor("#E9F3F5"))
+            setTextColor(android.graphics.Color.parseColor("#000000"))
         }
 
         contentLayout.addView(title)

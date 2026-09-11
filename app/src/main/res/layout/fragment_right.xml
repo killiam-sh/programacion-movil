@@ -3,6 +3,6 @@
     android:id="@+id/contentLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0D2E3A"
+    android:background="#FFFFFF"
     android:orientation="vertical"
     android:padding="8dp" />

@@ -61,6 +61,21 @@ class LeftFragment : Fragment(R.layout.fragment_left) {
         listView.isVerticalScrollBarEnabled = true
 
         listView.adapter = adapter
+
+        // Listener para la barra roja de "Categorías"
+        view.findViewById<TextView>(R.id.categoriesHeader).setOnClickListener {
+            val popup = androidx.appcompat.widget.PopupMenu(requireContext(), it)
+            popup.menu.add("Electrónica")
+            popup.menu.add("Hogar")
+            popup.menu.add("Moda")
+            
+            popup.setOnMenuItemClickListener { item ->
+                listener?.onOptionSelected("Categoría: ${item.title}")
+                true
+            }
+            popup.show()
+        }
+
         listView.setOnItemClickListener { _, _, position, _ ->
             listener?.onOptionSelected(options[position])
         }
