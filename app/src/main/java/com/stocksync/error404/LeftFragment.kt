@@ -16,6 +16,7 @@ class LeftFragment : Fragment(R.layout.fragment_left) {
     }
 
     private var listener: OnOptionSelectedListener? = null
+    private var selectedPosition: Int = 0
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -47,7 +48,11 @@ class LeftFragment : Fragment(R.layout.fragment_left) {
                 text.textSize = 22f
                 text.typeface = android.graphics.Typeface.DEFAULT_BOLD
                 text.setPadding(20, 26, 20, 26)
-                text.setBackgroundColor(android.graphics.Color.parseColor("#113D4D"))
+                if (position == selectedPosition) {
+                    text.setBackgroundColor(android.graphics.Color.parseColor("#D84F52"))
+                } else {
+                    text.setBackgroundColor(android.graphics.Color.parseColor("#113D4D"))
+                }
                 text.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
                 return view
             }
@@ -70,6 +75,8 @@ class LeftFragment : Fragment(R.layout.fragment_left) {
             popup.menu.add("Moda")
             
             popup.setOnMenuItemClickListener { item ->
+                selectedPosition = -1
+                adapter.notifyDataSetChanged()
                 listener?.onOptionSelected("Categoría: ${item.title}")
                 true
             }
@@ -77,6 +84,8 @@ class LeftFragment : Fragment(R.layout.fragment_left) {
         }
 
         listView.setOnItemClickListener { _, _, position, _ ->
+            selectedPosition = position
+            adapter.notifyDataSetChanged()
             listener?.onOptionSelected(options[position])
         }
     }
