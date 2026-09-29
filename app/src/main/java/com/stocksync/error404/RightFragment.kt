@@ -271,7 +271,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             webViewClient = WebViewClient()
             webChromeClient = android.webkit.WebChromeClient()
-            loadUrl("https://stock-sync-react.vercel.app/")
+            loadUrl("https://www.google.com/")
         }
         webView = web
 
