@@ -1,10 +1,12 @@
 package com.stocksync.error404
 
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -16,7 +18,13 @@ class LeftFragment : Fragment(R.layout.fragment_left) {
     }
 
     private var listener: OnOptionSelectedListener? = null
-    private var selectedPosition: Int = 0
+    private var selectedPosition: Int = 1 // Por defecto "Inicio" (posición 1)
+
+    data class SidebarItem(
+        val title: String,
+        val iconResId: Int,
+        val actionName: String
+    )
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -33,60 +41,53 @@ class LeftFragment : Fragment(R.layout.fragment_left) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val options = listOf("Perfil", "Fotos", "Video", "Web", "Botones")
+        val items = listOf(
+            SidebarItem("Categorías", R.drawable.ic_sidebar_categories, "Categorías"),
+            SidebarItem("Inicio", R.drawable.ic_sidebar_home, "Inicio"),
+            SidebarItem("Catálogo", R.drawable.ic_sidebar_catalog, "Catálogo"),
+            SidebarItem("Videos", R.drawable.ic_sidebar_videos, "Videos"),
+            SidebarItem("Mi Cuenta", R.drawable.ic_sidebar_account, "Mi Cuenta")
+        )
+
         val listView = view.findViewById<ListView>(R.id.optionsListView)
 
-        val adapter = object : ArrayAdapter<String>(
+        val adapter = object : ArrayAdapter<SidebarItem>(
             requireContext(),
-            android.R.layout.simple_list_item_1,
-            options
+            R.layout.item_sidebar_button,
+            items
         ) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val view = super.getView(position, convertView, parent)
-                val text = view.findViewById<TextView>(android.R.id.text1)
-                text.setTextColor(android.graphics.Color.parseColor("#F4F5F8"))
-                text.textSize = 22f
-                text.typeface = android.graphics.Typeface.DEFAULT_BOLD
-                text.setPadding(20, 26, 20, 26)
+                val rowView = convertView ?: layoutInflater.inflate(R.layout.item_sidebar_button, parent, false)
+                val item = items[position]
+
+                val container = rowView.findViewById<View>(R.id.itemContainer)
+                val iconView = rowView.findViewById<ImageView>(R.id.itemIcon)
+                val textView = rowView.findViewById<TextView>(R.id.itemText)
+
+                iconView.setImageResource(item.iconResId)
+                textView.text = item.title
+
                 if (position == selectedPosition) {
-                    text.setBackgroundColor(android.graphics.Color.parseColor("#D84F52"))
+                    container.setBackgroundResource(R.drawable.bg_sidebar_item_selected)
+                    iconView.setColorFilter(Color.parseColor("#FFFFFF"))
+                    textView.setTextColor(Color.parseColor("#FFFFFF"))
                 } else {
-                    text.setBackgroundColor(android.graphics.Color.parseColor("#113D4D"))
+                    container.background = null
+                    iconView.setColorFilter(Color.parseColor("#F4F5F8"))
+                    textView.setTextColor(Color.parseColor("#F4F5F8"))
                 }
-                text.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
-                return view
+
+                return rowView
             }
         }
-
-        listView.setBackgroundColor(android.graphics.Color.parseColor("#0B1F2A"))
-        listView.setCacheColorHint(android.graphics.Color.parseColor("#0B1F2A"))
-        listView.setSelector(android.graphics.drawable.ColorDrawable(android.graphics.Color.parseColor("#D84F52")))
-        listView.divider = null
-        listView.setPadding(12, 12, 12, 12)
-        listView.isVerticalScrollBarEnabled = true
 
         listView.adapter = adapter
-
-        // Listener para la barra roja de "Categorías"
-        view.findViewById<TextView>(R.id.categoriesHeader).setOnClickListener {
-            val popup = androidx.appcompat.widget.PopupMenu(requireContext(), it)
-            popup.menu.add("Electrónica")
-            popup.menu.add("Hogar")
-            popup.menu.add("Moda")
-            
-            popup.setOnMenuItemClickListener { item ->
-                selectedPosition = -1
-                adapter.notifyDataSetChanged()
-                listener?.onOptionSelected("Categoría: ${item.title}")
-                true
-            }
-            popup.show()
-        }
 
         listView.setOnItemClickListener { _, _, position, _ ->
             selectedPosition = position
             adapter.notifyDataSetChanged()
-            listener?.onOptionSelected(options[position])
+            val selected = items[position]
+            listener?.onOptionSelected(selected.actionName)
         }
     }
 }
