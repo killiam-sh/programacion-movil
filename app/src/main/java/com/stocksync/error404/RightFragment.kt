@@ -1,5 +1,6 @@
 package com.stocksync.error404
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -9,10 +10,12 @@ import android.text.method.ScrollingMovementMethod
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.MediaController
@@ -22,13 +25,12 @@ import android.widget.Toast
 import android.widget.VideoView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
+import java.util.Locale
 
 class RightFragment : Fragment(R.layout.fragment_right) {
 
     private lateinit var contentLayout: LinearLayout
 
-    // Se guardan para poder liberarlos: con solo removeAllViews() el MediaPlayer
-    // del VideoView sigue vivo (el audio continua) y el WebView se filtra.
     private var videoView: VideoView? = null
     private var webView: WebView? = null
 
@@ -50,7 +52,8 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             option == "Catálogo" || option == "Fotos" -> renderPhotos()
             option == "Videos" || option == "Video" -> renderVideo()
             option == "Web" -> renderWeb()
-            option == "Botones" -> renderButtons()
+            option == "Carrito" || option == "Botones" -> renderCart()
+            option == "Favoritos" -> renderFavorites()
             option == "Categorías" -> renderCategoriesOverview()
             option.startsWith("Categoría: ") -> {
                 val catName = option.substringAfter("Categoría: ")
@@ -66,7 +69,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(Color.parseColor("#062E38"))
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
         }
 
         val mainContainer = LinearLayout(requireContext()).apply {
@@ -79,7 +82,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             orientation = LinearLayout.HORIZONTAL
             setPadding(16, 12, 16, 12)
             gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(Color.parseColor("#0C2D3A"))
+            setBackgroundColor(Color.parseColor("#F2F4F7"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -94,7 +97,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         val searchText = TextView(requireContext()).apply {
             text = "Buscar productos, marcas o categorías"
             textSize = 14f
-            setTextColor(Color.parseColor("#8E9DA6"))
+            setTextColor(Color.parseColor("#555555"))
         }
         searchBox.addView(searchIcon)
         searchBox.addView(searchText)
@@ -160,7 +163,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             text = "Categorías"
             textSize = 18f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
+            setTextColor(Color.parseColor("#000000"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -187,7 +190,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 setPadding(12, 16, 12, 16)
-                setBackgroundColor(Color.parseColor("#0C2D3A"))
+                setBackgroundColor(Color.parseColor("#F2F4F7"))
                 layoutParams = LinearLayout.LayoutParams(
                     0,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -213,7 +216,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             val labelView = TextView(requireContext()).apply {
                 text = cat
                 textSize = 12f
-                setTextColor(Color.parseColor("#D0D8E0"))
+                setTextColor(Color.parseColor("#333333"))
                 gravity = Gravity.CENTER
             }
             catCard.addView(iconView)
@@ -237,7 +240,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             text = "Productos Destacados"
             textSize = 18f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
+            setTextColor(Color.parseColor("#000000"))
             layoutParams = LinearLayout.LayoutParams(
                 0,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -276,7 +279,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             val pCard = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(12, 12, 12, 12)
-                setBackgroundColor(Color.parseColor("#0C2D3A"))
+                setBackgroundColor(Color.parseColor("#F2F4F7"))
                 layoutParams = LinearLayout.LayoutParams(
                     0,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -290,7 +293,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             }
             val pImgBox = LinearLayout(requireContext()).apply {
                 gravity = Gravity.CENTER
-                setBackgroundColor(Color.parseColor("#08222C"))
+                setBackgroundColor(Color.parseColor("#E4E7EB"))
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     110
@@ -308,7 +311,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 text = name
                 textSize = 14f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.WHITE)
+                setTextColor(Color.parseColor("#000000"))
                 maxLines = 2
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -337,14 +340,32 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 text = oldPrice
                 textSize = 12f
                 paintFlags = paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-                setTextColor(Color.parseColor("#8E9DA6"))
+                setTextColor(Color.parseColor("#777777"))
             }
             priceRow.addView(pPrice)
             priceRow.addView(pOldPrice)
 
+            val addCartBtn = Button(requireContext()).apply {
+                text = "🛒 Agregar"
+                textSize = 11f
+                setBackgroundColor(Color.parseColor("#D84F52"))
+                setTextColor(Color.WHITE)
+                setOnClickListener {
+                    CartRepository.addItem(CartItem(name, price, "Producto Destacado"))
+                    Toast.makeText(requireContext(), "¡$name agregado al carrito!", Toast.LENGTH_SHORT).show()
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 8
+                }
+            }
+
             pCard.addView(pImgBox)
             pCard.addView(pName)
             pCard.addView(priceRow)
+            pCard.addView(addCartBtn)
             productsRow.addView(pCard)
         }
         mainContainer.addView(productsRow)
@@ -354,7 +375,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(16, 16, 16, 16)
-            setBackgroundColor(Color.parseColor("#0C2D3A"))
+            setBackgroundColor(Color.parseColor("#F2F4F7"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -375,7 +396,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             text = "Flash Sale"
             textSize = 16f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
+            setTextColor(Color.parseColor("#000000"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -386,7 +407,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         val flashDesc = TextView(requireContext()).apply {
             text = "Termina en menos de 2 horas.\nCompra ahora y aprovecha."
             textSize = 12f
-            setTextColor(Color.parseColor("#A0B0BC"))
+            setTextColor(Color.parseColor("#555555"))
         }
         flashInfo.addView(flashHeader)
         flashInfo.addView(flashDesc)
@@ -409,18 +430,22 @@ class RightFragment : Fragment(R.layout.fragment_right) {
     }
 
     private fun renderCategoriesOverview() {
-        val title = TextView(requireContext()).apply {
-            text = "Categorías Principales"
-            textSize = 22f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.BLACK)
-            setPadding(16, 16, 16, 16)
-        }
-        val cats = listOf("Electrónica", "Hogar", "Moda")
+        val scrollView = ScrollView(requireContext())
         val container = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16, 16, 16, 16)
         }
+
+        val title = TextView(requireContext()).apply {
+            text = "Categorías Principales"
+            textSize = 22f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 0, 0, 16)
+        }
+        container.addView(title)
+
+        val cats = listOf("Electrónica", "Hogar", "Moda")
         cats.forEach { cat ->
             val btn = Button(requireContext()).apply {
                 text = cat
@@ -438,8 +463,9 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             }
             container.addView(btn)
         }
-        contentLayout.addView(title)
-        contentLayout.addView(container)
+
+        scrollView.addView(container)
+        contentLayout.addView(scrollView)
     }
 
     private fun renderCategory(category: String) {
@@ -460,30 +486,30 @@ class RightFragment : Fragment(R.layout.fragment_right) {
 
         val products = when (category) {
             "Electrónica" -> listOf(
-                "Smartwatch Pro" to "Reloj inteligente para entrenamientos y notificaciones.",
-                "Audífonos X9" to "Sonido premium con batería de larga duración.",
-                "Laptop Aero" to "Portátil ligera para estudio y trabajo diario.",
-                "Cámara Mini" to "Captura fotos y videos con calidad profesional.",
-                "Gafas VR" to "Experiencia inmersiva para entretenimiento y gaming."
+                Triple("Smartwatch Pro", "$450.000", "Reloj inteligente para entrenamientos y notificaciones."),
+                Triple("Audífonos X9", "$120.000", "Sonido premium con batería de larga duración."),
+                Triple("Laptop Aero", "$1.800.000", "Portátil ligera para estudio y trabajo diario."),
+                Triple("Cámara Mini", "$350.000", "Captura fotos y videos con calidad profesional."),
+                Triple("Gafas VR", "$290.000", "Experiencia inmersiva para entretenimiento y gaming.")
             )
             "Hogar" -> listOf(
-                "Lámpara LED" to "Iluminación inteligente y de bajo consumo para tu hogar.",
-                "Cafetera" to "Café fresco y recién hecho todas las mañanas.",
-                "Juego de Sábanas" to "Suavidad y confort para un descanso óptimo."
+                Triple("Lámpara LED", "$85.000", "Iluminación inteligente y de bajo consumo para tu hogar."),
+                Triple("Cafetera", "$190.000", "Café fresco y recién hecho todas las mañanas."),
+                Triple("Juego de Sábanas", "$150.000", "Suavidad y confort para un descanso óptimo.")
             )
             "Moda" -> listOf(
-                "Chaqueta Denim" to "Estilo clásico y duradero para cualquier ocasión.",
-                "Tenis Urban" to "Comodidad y diseño moderno para el día a día.",
-                "Gorra Sync" to "Protección y estilo urbano con ajuste perfecto."
+                Triple("Chaqueta Denim", "$120.000", "Estilo clásico y duradero para cualquier ocasión."),
+                Triple("Tenis Urban", "$210.000", "Comodidad y diseño moderno para el día a día."),
+                Triple("Gorra Sync", "$35.000", "Protección y estilo urbano con ajuste perfecto.")
             )
-            else -> listOf("Sin productos" to "No hay descripción disponible.")
+            else -> emptyList()
         }
 
-        products.forEach { (titleText, descText) ->
+        products.forEach { (titleText, priceText, descText) ->
             val card = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(12, 12, 12, 12)
-                setBackgroundColor(Color.parseColor("#EEEEEE"))
+                setBackgroundColor(Color.parseColor("#F2F4F7"))
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -499,14 +525,58 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 setTextColor(Color.parseColor("#000000"))
             }
 
+            val priceView = TextView(requireContext()).apply {
+                text = priceText
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#D84F52"))
+            }
+
             val descView = TextView(requireContext()).apply {
                 text = descText
                 textSize = 14f
                 setTextColor(Color.parseColor("#333333"))
             }
 
+            val addBtn = Button(requireContext()).apply {
+                text = "🛒 Agregar al carrito"
+                textSize = 12f
+                setBackgroundColor(Color.parseColor("#D84F52"))
+                setTextColor(Color.WHITE)
+                setOnClickListener {
+                    CartRepository.addItem(CartItem(titleText, priceText, descText))
+                    Toast.makeText(requireContext(), "¡$titleText agregado al carrito!", Toast.LENGTH_SHORT).show()
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 8
+                }
+            }
+
+            val favBtn = Button(requireContext()).apply {
+                text = "⭐ Agregar a favoritos"
+                textSize = 12f
+                setBackgroundColor(Color.parseColor("#2B8FA0"))
+                setTextColor(Color.WHITE)
+                setOnClickListener {
+                    FavoritesRepository.addItem(FavoriteItem(titleText, priceText, descText))
+                    Toast.makeText(requireContext(), "¡$titleText agregado a Favoritos!", Toast.LENGTH_SHORT).show()
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 6
+                }
+            }
+
             card.addView(titleView)
+            card.addView(priceView)
             card.addView(descView)
+            card.addView(addBtn)
+            card.addView(favBtn)
             container.addView(card)
         }
 
@@ -545,7 +615,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 "Habilidades: atención al cliente, ventas, investigación de mercado, " +
                 "diseño de contenido, analítica y gestión de campañas."
             textSize = 16f
-            setTextColor(android.graphics.Color.parseColor("#000000"))
+            setTextColor(Color.parseColor("#000000"))
             setPadding(16, 16, 16, 16)
             movementMethod = ScrollingMovementMethod()
         }
@@ -584,24 +654,25 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         container.addView(titleView)
 
         val allProducts = listOf(
-            Triple("Electrónica", "Smartwatch Pro", "Reloj inteligente para entrenamientos y notificaciones."),
-            Triple("Electrónica", "Audífonos X9", "Sonido premium con batería de larga duración."),
-            Triple("Electrónica", "Laptop Aero", "Portátil ligera para estudio y trabajo diario."),
-            Triple("Electrónica", "Cámara Mini", "Captura fotos y videos con calidad profesional."),
-            Triple("Electrónica", "Gafas VR", "Experiencia inmersiva para entretenimiento y gaming."),
-            Triple("Hogar", "Lámpara LED", "Iluminación inteligente y de bajo consumo para tu hogar."),
-            Triple("Hogar", "Cafetera", "Café fresco y recién hecho todas las mañanas."),
-            Triple("Hogar", "Juego de Sábanas", "Suavidad y confort para un descanso óptimo."),
-            Triple("Moda", "Chaqueta Denim", "Estilo clásico y duradero para cualquier ocasión."),
-            Triple("Moda", "Tenis Urban", "Comodidad y diseño moderno para el día a día."),
-            Triple("Moda", "Gorra Sync", "Protección y estilo urbano con ajuste perfecto.")
+            Triple("Electrónica", "Smartwatch Pro" to "$450.000", "Reloj inteligente para entrenamientos y notificaciones."),
+            Triple("Electrónica", "Audífonos X9" to "$120.000", "Sonido premium con batería de larga duración."),
+            Triple("Electrónica", "Laptop Aero" to "$1.800.000", "Portátil ligera para estudio y trabajo diario."),
+            Triple("Electrónica", "Cámara Mini" to "$350.000", "Captura fotos y videos con calidad profesional."),
+            Triple("Electrónica", "Gafas VR" to "$290.000", "Experiencia inmersiva para entretenimiento y gaming."),
+            Triple("Hogar", "Lámpara LED" to "$85.000", "Iluminación inteligente y de bajo consumo para tu hogar."),
+            Triple("Hogar", "Cafetera" to "$190.000", "Café fresco y recién hecho todas las mañanas."),
+            Triple("Hogar", "Juego de Sábanas" to "$150.000", "Suavidad y confort para un descanso óptimo."),
+            Triple("Moda", "Chaqueta Denim" to "$120.000", "Estilo clásico y duradero para cualquier ocasión."),
+            Triple("Moda", "Tenis Urban" to "$210.000", "Comodidad y diseño moderno para el día a día."),
+            Triple("Moda", "Gorra Sync" to "$35.000", "Protección y estilo urbano con ajuste perfecto.")
         )
 
-        allProducts.forEach { (category, title, description) ->
+        allProducts.forEach { (category, productPair, description) ->
+            val (title, priceText) = productPair
             val card = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(12, 12, 12, 12)
-                setBackgroundColor(Color.parseColor("#EEEEEE"))
+                setBackgroundColor(Color.parseColor("#F2F4F7"))
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -622,18 +693,62 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 text = title
                 typeface = Typeface.DEFAULT_BOLD
                 textSize = 18f
-                setTextColor(android.graphics.Color.parseColor("#000000"))
+                setTextColor(Color.parseColor("#000000"))
+            }
+
+            val priceView = TextView(requireContext()).apply {
+                text = priceText
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#D84F52"))
             }
 
             val descView = TextView(requireContext()).apply {
                 text = description
                 textSize = 14f
-                setTextColor(android.graphics.Color.parseColor("#333333"))
+                setTextColor(Color.parseColor("#333333"))
+            }
+
+            val addBtn = Button(requireContext()).apply {
+                text = "🛒 Agregar al carrito"
+                textSize = 12f
+                setBackgroundColor(Color.parseColor("#D84F52"))
+                setTextColor(Color.WHITE)
+                setOnClickListener {
+                    CartRepository.addItem(CartItem(title, priceText, description))
+                    Toast.makeText(requireContext(), "¡$title agregado al carrito!", Toast.LENGTH_SHORT).show()
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 8
+                }
+            }
+
+            val favBtn = Button(requireContext()).apply {
+                text = "⭐ Agregar a favoritos"
+                textSize = 12f
+                setBackgroundColor(Color.parseColor("#2B8FA0"))
+                setTextColor(Color.WHITE)
+                setOnClickListener {
+                    FavoritesRepository.addItem(FavoriteItem(title, priceText, description))
+                    Toast.makeText(requireContext(), "¡$title agregado a Favoritos!", Toast.LENGTH_SHORT).show()
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 6
+                }
             }
 
             card.addView(catBadge)
             card.addView(titleViewItem)
+            card.addView(priceView)
             card.addView(descView)
+            card.addView(addBtn)
+            card.addView(favBtn)
             container.addView(card)
         }
 
@@ -646,7 +761,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             text = "Video promocional"
             textSize = 20f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(android.graphics.Color.parseColor("#000000"))
+            setTextColor(Color.parseColor("#000000"))
             setPadding(16, 16, 16, 8)
         }
 
@@ -695,7 +810,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             settings.domStorageEnabled = true
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             webViewClient = WebViewClient()
-            webChromeClient = android.webkit.WebChromeClient()
+            webChromeClient = WebChromeClient()
             loadUrl("https://www.google.com/")
         }
         webView = web
@@ -716,54 +831,348 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         contentLayout.addView(web)
     }
 
-    private fun renderButtons() {
-        val title = TextView(requireContext()).apply {
-            text = "Acciones rápidas"
-            textSize = 20f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(android.graphics.Color.parseColor("#000000"))
-            setPadding(16, 16, 16, 8)
+    private fun renderCart() {
+        if (!::contentLayout.isInitialized) return
+        contentLayout.removeAllViews()
+
+        val scrollView = ScrollView(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
         }
 
-        val statusText = TextView(requireContext()).apply {
-            text = "Sin acciones por ahora"
-            textSize = 16f
-            setTextColor(android.graphics.Color.parseColor("#000000"))
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
             setPadding(16, 16, 16, 16)
+        }
+
+        val title = TextView(requireContext()).apply {
+            text = "🛒 Carrito de Compras"
+            textSize = 22f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 0, 0, 16)
+        }
+        container.addView(title)
+
+        if (CartRepository.items.isEmpty()) {
+            val emptyMsg = TextView(requireContext()).apply {
+                text = "Tu carrito está vacío.\n\nExplora el Catálogo o las Categorías y agrega productos con el botón '🛒 Agregar al carrito'."
+                textSize = 15f
+                setTextColor(Color.parseColor("#666666"))
+                setPadding(0, 8, 0, 16)
+            }
+            container.addView(emptyMsg)
+        } else {
+            val itemsContainer = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+
+            fun updateTotalPrice(totalView: TextView) {
+                var total = 0
+                CartRepository.items.filter { it.isSelected }.forEach { item ->
+                    val numericPrice = item.price.replace("$", "").replace(".", "").trim().toIntOrNull() ?: 0
+                    total += numericPrice
+                }
+                totalView.text = "Total seleccionado: $%,d".format(Locale("es", "CO"), total).replace(',', '.')
+            }
+
+            val totalView = TextView(requireContext()).apply {
+                textSize = 18f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#D84F52"))
+                setPadding(0, 8, 0, 16)
+            }
+            updateTotalPrice(totalView)
+
+            CartRepository.items.forEach { cartItem ->
+                val card = LinearLayout(requireContext()).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    setPadding(12, 12, 12, 12)
+                    gravity = Gravity.CENTER_VERTICAL
+                    setBackgroundColor(Color.parseColor("#F2F4F7"))
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        bottomMargin = 10
+                    }
+                }
+
+                val checkBox = CheckBox(requireContext()).apply {
+                    isChecked = cartItem.isSelected
+                    setOnCheckedChangeListener { _, isChecked ->
+                        cartItem.isSelected = isChecked
+                        updateTotalPrice(totalView)
+                    }
+                }
+
+                val info = LinearLayout(requireContext()).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(8, 0, 8, 0)
+                    layoutParams = LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                }
+
+                val nameView = TextView(requireContext()).apply {
+                    text = cartItem.title
+                    typeface = Typeface.DEFAULT_BOLD
+                    textSize = 16f
+                    setTextColor(Color.parseColor("#000000"))
+                }
+
+                val priceView = TextView(requireContext()).apply {
+                    text = "${cartItem.price} - ${cartItem.description}"
+                    textSize = 13f
+                    setTextColor(Color.parseColor("#555555"))
+                    maxLines = 2
+                }
+
+                info.addView(nameView)
+                info.addView(priceView)
+
+                val deleteBtn = Button(requireContext()).apply {
+                    text = "🗑️"
+                    textSize = 14f
+                    setBackgroundColor(Color.TRANSPARENT)
+                    setOnClickListener {
+                        CartRepository.removeItem(cartItem)
+                        Toast.makeText(requireContext(), "Producto eliminado", Toast.LENGTH_SHORT).show()
+                        renderCart()
+                    }
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                }
+
+                card.addView(checkBox)
+                card.addView(info)
+                card.addView(deleteBtn)
+                itemsContainer.addView(card)
+            }
+
+            container.addView(totalView)
+            container.addView(itemsContainer)
+        }
+
+        // Acciones de pago (Siempre visibles)
+        val actionsTitle = TextView(requireContext()).apply {
+            text = "Acciones rápidas"
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 24, 0, 8)
+        }
+        container.addView(actionsTitle)
+
+        val statusText = TextView(requireContext()).apply {
+            text = "Selecciona productos y elige una acción"
+            textSize = 14f
+            setTextColor(Color.parseColor("#333333"))
+            setPadding(0, 8, 0, 12)
         }
 
         val buyButton = Button(requireContext()).apply {
             text = "Comprar ahora"
-            setBackgroundColor(android.graphics.Color.parseColor("#D84F52"))
-            setTextColor(android.graphics.Color.WHITE)
-            setOnClickListener { statusText.text = "Compra confirmada" }
+            setBackgroundColor(Color.parseColor("#D84F52"))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                val selectedCount = CartRepository.items.count { it.isSelected }
+                if (CartRepository.items.isEmpty()) {
+                    statusText.text = "El carrito está vacío. Agrega productos para comprar."
+                } else if (selectedCount > 0) {
+                    statusText.text = "¡Compra confirmada de $selectedCount producto(s)!"
+                    Toast.makeText(requireContext(), "¡Compra realizada con éxito!", Toast.LENGTH_SHORT).show()
+                    CartRepository.clearSelected()
+                    renderCart()
+                } else {
+                    statusText.text = "Por favor selecciona al menos un producto para comprar."
+                }
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 8 }
         }
 
         val saveButton = Button(requireContext()).apply {
             text = "Guardar"
-            setBackgroundColor(android.graphics.Color.parseColor("#2B8FA0"))
-            setTextColor(android.graphics.Color.WHITE)
-            setOnClickListener { statusText.text = "Producto guardado" }
+            setBackgroundColor(Color.parseColor("#2B8FA0"))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                val selectedItems = CartRepository.items.filter { it.isSelected }
+                if (selectedItems.isNotEmpty()) {
+                    selectedItems.forEach { cartItem ->
+                        FavoritesRepository.addItem(FavoriteItem(cartItem.title, cartItem.price, cartItem.description))
+                    }
+                    statusText.text = "¡${selectedItems.size} producto(s) guardado(s) en Favoritos!"
+                    Toast.makeText(requireContext(), "¡Guardado en Favoritos!", Toast.LENGTH_SHORT).show()
+                } else {
+                    statusText.text = "Selecciona al menos un producto para guardar."
+                }
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 8 }
         }
 
         val shareButton = Button(requireContext()).apply {
             text = "Compartir"
-            setBackgroundColor(android.graphics.Color.parseColor("#F0B38A"))
-            setTextColor(android.graphics.Color.WHITE)
-            setOnClickListener { statusText.text = "Enlace compartido" }
+            setBackgroundColor(Color.parseColor("#F0B38A"))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                val selectedItems = CartRepository.items.filter { it.isSelected }
+                val shareText = if (selectedItems.isNotEmpty()) {
+                    "¡Mira mis productos seleccionados en StockSync:\n" +
+                        selectedItems.joinToString("\n") { "- ${it.title} (${it.price})" }
+                } else {
+                    "¡Visita StockSync y descubre nuestros productos!"
+                }
+                val intent = Intent().apply {
+                    action = Intent.ACTION_SEND
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, shareText)
+                }
+                try {
+                    context?.startActivity(Intent.createChooser(intent, "Compartir vía"))
+                } catch (e: Exception) {
+                    statusText.text = "Enlace compartido"
+                }
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 16 }
         }
 
         val switchWidget = SwitchCompat(requireContext()).apply {
             text = "Notificaciones activadas"
             isChecked = true
-            setTextColor(android.graphics.Color.parseColor("#000000"))
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 8, 0, 16)
         }
 
-        contentLayout.addView(title)
-        contentLayout.addView(buyButton)
-        contentLayout.addView(saveButton)
-        contentLayout.addView(shareButton)
-        contentLayout.addView(switchWidget)
-        contentLayout.addView(statusText)
+        container.addView(buyButton)
+        container.addView(saveButton)
+        container.addView(shareButton)
+        container.addView(switchWidget)
+        container.addView(statusText)
+
+        scrollView.addView(container)
+        contentLayout.addView(scrollView)
+    }
+
+    private fun renderFavorites() {
+        if (!::contentLayout.isInitialized) return
+        contentLayout.removeAllViews()
+
+        val scrollView = ScrollView(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
+        }
+
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(16, 16, 16, 16)
+        }
+
+        val title = TextView(requireContext()).apply {
+            text = "⭐ Mis Favoritos"
+            textSize = 22f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 0, 0, 16)
+        }
+        container.addView(title)
+
+        if (FavoritesRepository.items.isEmpty()) {
+            val emptyMsg = TextView(requireContext()).apply {
+                text = "No tienes productos guardados en favoritos.\n\nVe al Carrito, selecciona productos y presiona 'Guardar'."
+                textSize = 15f
+                setTextColor(Color.parseColor("#666666"))
+                setPadding(0, 8, 0, 16)
+            }
+            container.addView(emptyMsg)
+        } else {
+            val itemsContainer = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+
+            FavoritesRepository.items.forEach { favItem ->
+                val card = LinearLayout(requireContext()).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    setPadding(12, 12, 12, 12)
+                    gravity = Gravity.CENTER_VERTICAL
+                    setBackgroundColor(Color.parseColor("#F2F4F7"))
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        bottomMargin = 10
+                    }
+                }
+
+                val info = LinearLayout(requireContext()).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(8, 0, 8, 0)
+                    layoutParams = LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                }
+
+                val nameView = TextView(requireContext()).apply {
+                    text = favItem.title
+                    typeface = Typeface.DEFAULT_BOLD
+                    textSize = 16f
+                    setTextColor(Color.parseColor("#000000"))
+                }
+
+                val priceView = TextView(requireContext()).apply {
+                    text = "${favItem.price} - ${favItem.description}"
+                    textSize = 13f
+                    setTextColor(Color.parseColor("#555555"))
+                    maxLines = 2
+                }
+
+                info.addView(nameView)
+                info.addView(priceView)
+
+                val deleteBtn = Button(requireContext()).apply {
+                    text = "🗑️"
+                    textSize = 14f
+                    setBackgroundColor(Color.TRANSPARENT)
+                    setOnClickListener {
+                        FavoritesRepository.removeItem(favItem)
+                        Toast.makeText(requireContext(), "Eliminado de favoritos", Toast.LENGTH_SHORT).show()
+                        renderFavorites()
+                    }
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                }
+
+                card.addView(info)
+                card.addView(deleteBtn)
+                itemsContainer.addView(card)
+            }
+
+            container.addView(itemsContainer)
+        }
+
+        scrollView.addView(container)
+        contentLayout.addView(scrollView)
     }
 }

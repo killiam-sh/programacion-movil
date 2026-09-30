@@ -46,7 +46,9 @@ class LeftFragment : Fragment(R.layout.fragment_left) {
             SidebarItem("Inicio", R.drawable.ic_sidebar_home, "Inicio"),
             SidebarItem("Catálogo", R.drawable.ic_sidebar_catalog, "Catálogo"),
             SidebarItem("Videos", R.drawable.ic_sidebar_videos, "Videos"),
-            SidebarItem("Mi Cuenta", R.drawable.ic_sidebar_account, "Mi Cuenta")
+            SidebarItem("Mi Cuenta", R.drawable.ic_sidebar_account, "Mi Cuenta"),
+            SidebarItem("Carrito", R.drawable.ic_sidebar_cart, "Carrito"),
+            SidebarItem("Favoritos", R.drawable.ic_sidebar_favorite, "Favoritos")
         )
 
         val listView = view.findViewById<ListView>(R.id.optionsListView)
