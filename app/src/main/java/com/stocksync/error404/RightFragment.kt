@@ -1,11 +1,14 @@
 package com.stocksync.error404
 
+import android.app.Dialog
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.text.method.ScrollingMovementMethod
 import android.view.Gravity
 import android.view.View
@@ -14,17 +17,28 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.MediaController
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.VideoView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Locale
 
 class RightFragment : Fragment(R.layout.fragment_right) {
@@ -38,6 +52,92 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         super.onViewCreated(view, savedInstanceState)
         contentLayout = view.findViewById(R.id.contentLayout)
         showOption("Inicio")
+    }
+
+    private fun ImageView.loadUrl(urlString: String) {
+        setImageResource(android.R.drawable.ic_menu_gallery)
+        if (urlString.isEmpty()) return
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val url = URL(urlString)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.doInput = true
+                connection.connect()
+                val input = connection.inputStream
+                val bitmap = BitmapFactory.decodeStream(input)
+                withContext(Dispatchers.Main) {
+                    if (bitmap != null) {
+                        setImageBitmap(bitmap)
+                    }
+                }
+            } catch (e: Exception) {
+                // fallback
+            }
+        }
+    }
+
+    private fun showImageDialog(imageUrl: String, title: String) {
+        val dialog = Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        val layout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#CC000000"))
+            setPadding(16, 32, 16, 16)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        // Botón X de cierre
+        val closeBtn = Button(requireContext()).apply {
+            text = "✕ Cerrar"
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setBackgroundColor(Color.parseColor("#D84F52"))
+            setTextColor(Color.WHITE)
+            setOnClickListener { dialog.dismiss() }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.END
+                bottomMargin = 16
+            }
+        }
+
+        // Título del producto
+        val titleView = TextView(requireContext()).apply {
+            text = title
+            textSize = 20f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = 16
+            }
+        }
+
+        // Imagen grande responsive (se ajusta al tamaño de pantalla)
+        val largeImageView = ImageView(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            ).apply { bottomMargin = 24 }
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            loadUrl(imageUrl)
+        }
+
+        layout.addView(closeBtn)
+        layout.addView(titleView)
+        layout.addView(largeImageView)
+
+        dialog.setContentView(layout)
+        dialog.show()
     }
 
     fun showOption(option: String) {
@@ -184,7 +284,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         }
 
         val cats = listOf("Hogar", "Moda", "Electrónica", "Deportes")
-        val catIcons = listOf("🏠", "👕", "📱", "⚡")
+        val catIcons = listOf("🏠", "👕", "📱", "⚽")
         cats.forEachIndexed { index, cat ->
             val catCard = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
@@ -271,11 +371,11 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         }
 
         val products = listOf(
-            Triple("Smartphone Ultra 128GB", "$249.990", "$299.990"),
-            Triple("Audífonos Inalámbricos Pro", "$89.990", "$129.990")
+            Triple("Smartphone Ultra 128GB", "$249.990", "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&q=80"),
+            Triple("Audífonos Inalámbricos Pro", "$89.990", "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80")
         )
 
-        products.forEachIndexed { index, (name, price, oldPrice) ->
+        products.forEachIndexed { index, (name, price, imageUrl) ->
             val pCard = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(12, 12, 12, 12)
@@ -287,25 +387,19 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 ).apply {
                     marginEnd = if (index < products.size - 1) 12 else 0
                 }
-                setOnClickListener {
-                    Toast.makeText(requireContext(), "Seleccionado: $name", Toast.LENGTH_SHORT).show()
-                }
             }
-            val pImgBox = LinearLayout(requireContext()).apply {
-                gravity = Gravity.CENTER
-                setBackgroundColor(Color.parseColor("#E4E7EB"))
+
+            val pImageView = ImageView(requireContext()).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    110
-                ).apply {
-                    bottomMargin = 10
+                    180
+                ).apply { bottomMargin = 8 }
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                loadUrl(imageUrl)
+                setOnClickListener {
+                    showImageDialog(imageUrl, name)
                 }
             }
-            val pIcon = TextView(requireContext()).apply {
-                text = if (index == 0) "📱" else "🎧"
-                textSize = 32f
-            }
-            pImgBox.addView(pIcon)
 
             val pName = TextView(requireContext()).apply {
                 text = name
@@ -336,14 +430,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                     marginEnd = 8
                 }
             }
-            val pOldPrice = TextView(requireContext()).apply {
-                text = oldPrice
-                textSize = 12f
-                paintFlags = paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-                setTextColor(Color.parseColor("#777777"))
-            }
             priceRow.addView(pPrice)
-            priceRow.addView(pOldPrice)
 
             val addCartBtn = Button(requireContext()).apply {
                 text = "🛒 Agregar"
@@ -351,7 +438,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 setBackgroundColor(Color.parseColor("#D84F52"))
                 setTextColor(Color.WHITE)
                 setOnClickListener {
-                    CartRepository.addItem(CartItem(name, price, "Producto Destacado"))
+                    CartRepository.addItem(CartItem(name, price, "Producto Destacado", imageUrl))
                     Toast.makeText(requireContext(), "¡$name agregado al carrito!", Toast.LENGTH_SHORT).show()
                 }
                 layoutParams = LinearLayout.LayoutParams(
@@ -362,10 +449,28 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 }
             }
 
-            pCard.addView(pImgBox)
+            val addFavBtn = Button(requireContext()).apply {
+                text = "⭐ Favorito"
+                textSize = 11f
+                setBackgroundColor(Color.parseColor("#2B8FA0"))
+                setTextColor(Color.WHITE)
+                setOnClickListener {
+                    FavoritesRepository.addItem(FavoriteItem(name, price, "Producto Destacado", imageUrl))
+                    Toast.makeText(requireContext(), "¡$name agregado a Favoritos!", Toast.LENGTH_SHORT).show()
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 4
+                }
+            }
+
+            pCard.addView(pImageView)
             pCard.addView(pName)
             pCard.addView(priceRow)
             pCard.addView(addCartBtn)
+            pCard.addView(addFavBtn)
             productsRow.addView(pCard)
         }
         mainContainer.addView(productsRow)
@@ -445,23 +550,42 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         }
         container.addView(title)
 
-        val cats = listOf("Electrónica", "Hogar", "Moda")
+        val cats = listOf("Electrónica", "Hogar", "Moda", "Deportes")
+        val catIcons = mapOf("Electrónica" to "📱", "Hogar" to "🏠", "Moda" to "👕", "Deportes" to "⚽")
+
         cats.forEach { cat ->
-            val btn = Button(requireContext()).apply {
-                text = cat
-                setBackgroundColor(Color.parseColor("#0B1F2A"))
-                setTextColor(Color.WHITE)
-                setOnClickListener {
-                    showOption("Categoría: $cat")
-                }
+            val card = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(16, 16, 16, 16)
+                gravity = Gravity.CENTER_VERTICAL
+                setBackgroundColor(Color.parseColor("#F2F4F7"))
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
                     bottomMargin = 12
                 }
+                setOnClickListener {
+                    showOption("Categoría: $cat")
+                }
             }
-            container.addView(btn)
+
+            val iconView = TextView(requireContext()).apply {
+                text = catIcons[cat] ?: "📦"
+                textSize = 24f
+                setPadding(0, 0, 16, 0)
+            }
+
+            val textView = TextView(requireContext()).apply {
+                text = cat
+                textSize = 18f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#000000"))
+            }
+
+            card.addView(iconView)
+            card.addView(textView)
+            container.addView(card)
         }
 
         scrollView.addView(container)
@@ -486,26 +610,31 @@ class RightFragment : Fragment(R.layout.fragment_right) {
 
         val products = when (category) {
             "Electrónica" -> listOf(
-                Triple("Smartwatch Pro", "$450.000", "Reloj inteligente para entrenamientos y notificaciones."),
-                Triple("Audífonos X9", "$120.000", "Sonido premium con batería de larga duración."),
-                Triple("Laptop Aero", "$1.800.000", "Portátil ligera para estudio y trabajo diario."),
-                Triple("Cámara Mini", "$350.000", "Captura fotos y videos con calidad profesional."),
-                Triple("Gafas VR", "$290.000", "Experiencia inmersiva para entretenimiento y gaming.")
+                ProductData("Smartwatch Pro", "$450.000", "Reloj inteligente para entrenamientos y notificaciones.", "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80"),
+                ProductData("Audífonos X9", "$120.000", "Sonido premium con batería de larga duración.", "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80"),
+                ProductData("Laptop Aero", "$1.800.000", "Portátil ligera para estudio y trabajo diario.", "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&q=80"),
+                ProductData("Cámara Mini", "$350.000", "Captura fotos y videos con calidad profesional.", "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&q=80"),
+                ProductData("Gafas VR", "$290.000", "Experiencia inmersiva para entretenimiento y gaming.", "https://images.unsplash.com/photo-1593508512255-86ab42a8e620?w=300&q=80")
             )
             "Hogar" -> listOf(
-                Triple("Lámpara LED", "$85.000", "Iluminación inteligente y de bajo consumo para tu hogar."),
-                Triple("Cafetera", "$190.000", "Café fresco y recién hecho todas las mañanas."),
-                Triple("Juego de Sábanas", "$150.000", "Suavidad y confort para un descanso óptimo.")
+                ProductData("Lámpara LED", "$85.000", "Iluminación inteligente y de bajo consumo para tu hogar.", "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=300&q=80"),
+                ProductData("Cafetera", "$190.000", "Café fresco y recién hecho todas las mañanas.", "https://images.unsplash.com/photo-1620807773206-49c1f2957417?w=300&q=80"),
+                ProductData("Juego de Sábanas", "$150.000", "Suavidad y confort para un descanso óptimo.", "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=300&q=80")
             )
             "Moda" -> listOf(
-                Triple("Chaqueta Denim", "$120.000", "Estilo clásico y duradero para cualquier ocasión."),
-                Triple("Tenis Urban", "$210.000", "Comodidad y diseño moderno para el día a día."),
-                Triple("Gorra Sync", "$35.000", "Protección y estilo urbano con ajuste perfecto.")
+                ProductData("Chaqueta Denim", "$120.000", "Estilo clásico y duradero para cualquier ocasión.", "https://images.unsplash.com/photo-1543076447-215ad9ba6923?w=300&q=80"),
+                ProductData("Tenis Urban", "$210.000", "Comodidad y diseño moderno para el día a día.", "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&q=80"),
+                ProductData("Gorra Sync", "$35.000", "Protección y estilo urbano con ajuste perfecto.", "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=300&q=80")
+            )
+            "Deportes" -> listOf(
+                ProductData("Balón de Fútbol Pro", "$95.000", "Balón oficial con costuras reforzadas para alta durabilidad.", "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=300&q=80"),
+                ProductData("Raqueta de Tenis", "$210.000", "Raqueta ligera de grafito con encordado profesional.", "https://plus.unsplash.com/premium_photo-1666913667082-c1fecc45275d?w=300&q=80"),
+                ProductData("Guantes de Gym", "$45.000", "Protección acolchada para entrenamiento con pesas.", "https://images.unsplash.com/photo-1557127972-1c446ea89ea5?w=300&q=80")
             )
             else -> emptyList()
         }
 
-        products.forEach { (titleText, priceText, descText) ->
+        products.forEach { prod ->
             val card = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(12, 12, 12, 12)
@@ -518,22 +647,34 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 }
             }
 
+            val imageView = ImageView(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    220
+                ).apply { bottomMargin = 8 }
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                loadUrl(prod.imageUrl)
+                setOnClickListener {
+                    showImageDialog(prod.imageUrl, prod.title)
+                }
+            }
+
             val titleView = TextView(requireContext()).apply {
-                text = titleText
+                text = prod.title
                 typeface = Typeface.DEFAULT_BOLD
                 textSize = 18f
                 setTextColor(Color.parseColor("#000000"))
             }
 
             val priceView = TextView(requireContext()).apply {
-                text = priceText
+                text = prod.price
                 textSize = 16f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.parseColor("#D84F52"))
             }
 
             val descView = TextView(requireContext()).apply {
-                text = descText
+                text = prod.description
                 textSize = 14f
                 setTextColor(Color.parseColor("#333333"))
             }
@@ -544,8 +685,8 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 setBackgroundColor(Color.parseColor("#D84F52"))
                 setTextColor(Color.WHITE)
                 setOnClickListener {
-                    CartRepository.addItem(CartItem(titleText, priceText, descText))
-                    Toast.makeText(requireContext(), "¡$titleText agregado al carrito!", Toast.LENGTH_SHORT).show()
+                    CartRepository.addItem(CartItem(prod.title, prod.price, prod.description, prod.imageUrl))
+                    Toast.makeText(requireContext(), "¡${prod.title} agregado al carrito!", Toast.LENGTH_SHORT).show()
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -561,8 +702,8 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 setBackgroundColor(Color.parseColor("#2B8FA0"))
                 setTextColor(Color.WHITE)
                 setOnClickListener {
-                    FavoritesRepository.addItem(FavoriteItem(titleText, priceText, descText))
-                    Toast.makeText(requireContext(), "¡$titleText agregado a Favoritos!", Toast.LENGTH_SHORT).show()
+                    FavoritesRepository.addItem(FavoriteItem(prod.title, prod.price, prod.description, prod.imageUrl))
+                    Toast.makeText(requireContext(), "¡${prod.title} agregado a Favoritos!", Toast.LENGTH_SHORT).show()
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -572,6 +713,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 }
             }
 
+            card.addView(imageView)
             card.addView(titleView)
             card.addView(priceView)
             card.addView(descView)
@@ -583,6 +725,8 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         scrollView.addView(container)
         contentLayout.addView(scrollView)
     }
+
+    private data class ProductData(val title: String, val price: String, val description: String, val imageUrl: String)
 
     private fun releaseMedia() {
         videoView?.stopPlayback()
@@ -654,21 +798,23 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         container.addView(titleView)
 
         val allProducts = listOf(
-            Triple("Electrónica", "Smartwatch Pro" to "$450.000", "Reloj inteligente para entrenamientos y notificaciones."),
-            Triple("Electrónica", "Audífonos X9" to "$120.000", "Sonido premium con batería de larga duración."),
-            Triple("Electrónica", "Laptop Aero" to "$1.800.000", "Portátil ligera para estudio y trabajo diario."),
-            Triple("Electrónica", "Cámara Mini" to "$350.000", "Captura fotos y videos con calidad profesional."),
-            Triple("Electrónica", "Gafas VR" to "$290.000", "Experiencia inmersiva para entretenimiento y gaming."),
-            Triple("Hogar", "Lámpara LED" to "$85.000", "Iluminación inteligente y de bajo consumo para tu hogar."),
-            Triple("Hogar", "Cafetera" to "$190.000", "Café fresco y recién hecho todas las mañanas."),
-            Triple("Hogar", "Juego de Sábanas" to "$150.000", "Suavidad y confort para un descanso óptimo."),
-            Triple("Moda", "Chaqueta Denim" to "$120.000", "Estilo clásico y duradero para cualquier ocasión."),
-            Triple("Moda", "Tenis Urban" to "$210.000", "Comodidad y diseño moderno para el día a día."),
-            Triple("Moda", "Gorra Sync" to "$35.000", "Protección y estilo urbano con ajuste perfecto.")
+            ProductData("Smartwatch Pro", "$450.000", "Reloj inteligente para entrenamientos y notificaciones.", "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80"),
+            ProductData("Audífonos X9", "$120.000", "Sonido premium con batería de larga duración.", "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80"),
+            ProductData("Laptop Aero", "$1.800.000", "Portátil ligera para estudio y trabajo diario.", "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&q=80"),
+            ProductData("Cámara Mini", "$350.000", "Captura fotos y videos con calidad profesional.", "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&q=80"),
+            ProductData("Gafas VR", "$290.000", "Gafas de realidad virtual inmersiva.", "https://images.unsplash.com/photo-1593508512255-86ab42a8e620?w=300&q=80"),
+            ProductData("Lámpara LED", "$85.000", "Iluminación inteligente y de bajo consumo.", "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=300&q=80"),
+            ProductData("Cafetera", "$190.000", "Café fresco y recién hecho todas las mañanas.", "https://images.unsplash.com/photo-1620807773206-49c1f2957417?w=300&q=80"),
+            ProductData("Juego de Sábanas", "$150.000", "Suavidad y confort para un descanso óptimo.", "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=300&q=80"),
+            ProductData("Chaqueta Denim", "$120.000", "Estilo clásico y duradero para cualquier ocasión.", "https://images.unsplash.com/photo-1543076447-215ad9ba6923?w=300&q=80"),
+            ProductData("Tenis Urban", "$210.000", "Comodidad y diseño moderno para el día a día.", "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&q=80"),
+            ProductData("Gorra Sync", "$35.000", "Protección y estilo urbano con ajuste perfecto.", "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=300&q=80"),
+            ProductData("Balón de Fútbol Pro", "$95.000", "Balón oficial con costuras reforzadas para alta durabilidad.", "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=300&q=80"),
+            ProductData("Raqueta de Tenis", "$210.000", "Raqueta ligera de grafito con encordado profesional.", "https://plus.unsplash.com/premium_photo-1666913667082-c1fecc45275d?w=300&q=80"),
+            ProductData("Guantes de Gym", "$45.000", "Protección acolchada para entrenamiento con pesas.", "https://images.unsplash.com/photo-1557127972-1c446ea89ea5?w=300&q=80")
         )
 
-        allProducts.forEach { (category, productPair, description) ->
-            val (title, priceText) = productPair
+        allProducts.forEach { prod ->
             val card = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(12, 12, 12, 12)
@@ -681,30 +827,34 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 }
             }
 
-            val catBadge = TextView(requireContext()).apply {
-                text = "[$category]"
-                textSize = 12f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor("#D84F52"))
-                setPadding(0, 0, 0, 4)
+            val imageView = ImageView(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    220
+                ).apply { bottomMargin = 8 }
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                loadUrl(prod.imageUrl)
+                setOnClickListener {
+                    showImageDialog(prod.imageUrl, prod.title)
+                }
             }
 
             val titleViewItem = TextView(requireContext()).apply {
-                text = title
+                text = prod.title
                 typeface = Typeface.DEFAULT_BOLD
                 textSize = 18f
                 setTextColor(Color.parseColor("#000000"))
             }
 
             val priceView = TextView(requireContext()).apply {
-                text = priceText
+                text = prod.price
                 textSize = 16f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.parseColor("#D84F52"))
             }
 
             val descView = TextView(requireContext()).apply {
-                text = description
+                text = prod.description
                 textSize = 14f
                 setTextColor(Color.parseColor("#333333"))
             }
@@ -715,8 +865,8 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 setBackgroundColor(Color.parseColor("#D84F52"))
                 setTextColor(Color.WHITE)
                 setOnClickListener {
-                    CartRepository.addItem(CartItem(title, priceText, description))
-                    Toast.makeText(requireContext(), "¡$title agregado al carrito!", Toast.LENGTH_SHORT).show()
+                    CartRepository.addItem(CartItem(prod.title, prod.price, prod.description, prod.imageUrl))
+                    Toast.makeText(requireContext(), "¡${prod.title} agregado al carrito!", Toast.LENGTH_SHORT).show()
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -732,8 +882,8 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 setBackgroundColor(Color.parseColor("#2B8FA0"))
                 setTextColor(Color.WHITE)
                 setOnClickListener {
-                    FavoritesRepository.addItem(FavoriteItem(title, priceText, description))
-                    Toast.makeText(requireContext(), "¡$title agregado a Favoritos!", Toast.LENGTH_SHORT).show()
+                    FavoritesRepository.addItem(FavoriteItem(prod.title, prod.price, prod.description, prod.imageUrl))
+                    Toast.makeText(requireContext(), "¡${prod.title} agregado a Favoritos!", Toast.LENGTH_SHORT).show()
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -743,7 +893,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 }
             }
 
-            card.addView(catBadge)
+            card.addView(imageView)
             card.addView(titleViewItem)
             card.addView(priceView)
             card.addView(descView)
@@ -757,37 +907,133 @@ class RightFragment : Fragment(R.layout.fragment_right) {
     }
 
     private fun renderVideo() {
-        val title = TextView(requireContext()).apply {
-            text = "Video promocional"
-            textSize = 20f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#000000"))
-            setPadding(16, 16, 16, 8)
-        }
-
-        val video = VideoView(requireContext()).apply {
+        val scrollView = ScrollView(requireContext()).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                400
+                LinearLayout.LayoutParams.MATCH_PARENT
             )
-        }
-        videoView = video
-
-        val mediaController = MediaController(requireContext()).apply {
-            setAnchorView(video)
-        }
-        video.setMediaController(mediaController)
-        video.setVideoURI(Uri.parse("https://www.w3schools.com/html/mov_bbb.mp4"))
-
-        // La preparación es asíncrona: solo se reproduce cuando el medio está listo.
-        video.setOnPreparedListener { it.start() }
-        video.setOnErrorListener { _, _, _ ->
-            title.text = "No se pudo cargar el video. Revisa tu conexión a internet."
-            true
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
         }
 
-        contentLayout.addView(title)
-        contentLayout.addView(video)
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(16, 16, 16, 16)
+        }
+
+        val title = TextView(requireContext()).apply {
+            text = "🎬 Videos y Reseñas de Productos"
+            textSize = 22f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 0, 0, 16)
+        }
+        container.addView(title)
+
+        // Reproductor de video activo
+        val activeVideoTitle = TextView(requireContext()).apply {
+            text = "Reproduciendo: Reseña Smartwatch Pro"
+            textSize = 16f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#D84F52"))
+            setPadding(0, 0, 0, 8)
+        }
+
+        val webView = WebView(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                420
+            ).apply { bottomMargin = 16 }
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.mediaPlaybackRequiresUserGesture = false
+            webViewClient = WebViewClient()
+        }
+        this.webView = webView
+
+        fun loadHtmlVideo(videoUrl: String, videoTitle: String) {
+            activeVideoTitle.text = "Reproduciendo: $videoTitle"
+            val html = """
+                <html>
+                <body style="margin:0;background:black;display:flex;justify-content:center;align-items:center;height:100vh;">
+                    <video width="100%" height="100%" autoplay loop muted playsinline controls>
+                        <source src="$videoUrl" type="video/mp4">
+                        Tu navegador no soporta video HTML5.
+                    </video>
+                </body>
+                </html>
+            """.trimIndent()
+            webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+        }
+
+        loadHtmlVideo("https://v.ftcdn.net/09/08/13/27/700_F_908132772_dWNMIARe3SzIT5SZ4qEij7qh1ytNgmLs_ST.mp4", "Smartwatch Pro - Reseña")
+
+        container.addView(activeVideoTitle)
+        container.addView(webView)
+
+        // Lista de videos organizados por producto
+        val listTitle = TextView(requireContext()).apply {
+            text = "Lista de reproducción"
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 16, 0, 12)
+        }
+        container.addView(listTitle)
+
+        data class ProductVideo(val productName: String, val videoTitle: String, val url: String, val badge: String)
+        val productVideos = listOf(
+            ProductVideo("Smartwatch Pro", "Reseña y funciones de entrenamiento", "https://v.ftcdn.net/09/08/13/27/700_F_908132772_dWNMIARe3SzIT5SZ4qEij7qh1ytNgmLs_ST.mp4", "Electrónica"),
+            ProductVideo("Cafetera", "Tutorial de preparación de espresso", "https://v.ftcdn.net/01/99/94/53/700_F_199945383_Z7F6bH9SntILCslNPBk1poSr18jQArzZ_ST.mp4", "Hogar"),
+            ProductVideo("Audífonos X9", "Prueba de sonido y diseño", "https://v.ftcdn.net/17/75/93/98/700_F_1775939845_piQa8vokxJ6SMND2YdNhJRF9WIRAdlvW_ST.mp4", "Electrónica"),
+            ProductVideo("Laptop Aero", "Demostración de rendimiento", "https://v.ftcdn.net/04/66/14/30/700_F_466143069_YmW39PSSZrRSyBsi8POH8Zm8ZiOs3Uha_ST.mp4", "Electrónica")
+        )
+
+        productVideos.forEach { vid ->
+            val card = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(12, 12, 12, 12)
+                setBackgroundColor(Color.parseColor("#F2F4F7"))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = 10
+                }
+                setOnClickListener {
+                    loadHtmlVideo(vid.url, "${vid.productName} - ${vid.videoTitle}")
+                    Toast.makeText(requireContext(), "Cargando: ${vid.productName}", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            val badgeView = TextView(requireContext()).apply {
+                text = "[${vid.badge}]"
+                textSize = 11f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#D84F52"))
+                setPadding(0, 0, 0, 2)
+            }
+
+            val prodNameView = TextView(requireContext()).apply {
+                text = vid.productName
+                typeface = Typeface.DEFAULT_BOLD
+                textSize = 16f
+                setTextColor(Color.parseColor("#000000"))
+            }
+
+            val descView = TextView(requireContext()).apply {
+                text = vid.videoTitle
+                textSize = 13f
+                setTextColor(Color.parseColor("#555555"))
+            }
+
+            card.addView(badgeView)
+            card.addView(prodNameView)
+            card.addView(descView)
+            container.addView(card)
+        }
+
+        scrollView.addView(container)
+        contentLayout.addView(scrollView)
     }
 
     private fun renderWeb() {
@@ -832,9 +1078,6 @@ class RightFragment : Fragment(R.layout.fragment_right) {
     }
 
     private fun renderCart() {
-        if (!::contentLayout.isInitialized) return
-        contentLayout.removeAllViews()
-
         val scrollView = ScrollView(requireContext()).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -857,6 +1100,26 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         }
         container.addView(title)
 
+        val totalView = TextView(requireContext()).apply {
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#D84F52"))
+            setPadding(0, 8, 0, 16)
+        }
+
+        val itemsContainer = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        fun updateTotalPrice() {
+            var total = 0
+            CartRepository.items.filter { it.isSelected }.forEach { item ->
+                val numericPrice = item.price.replace("$", "").replace(".", "").trim().toIntOrNull() ?: 0
+                total += numericPrice
+            }
+            totalView.text = "Total seleccionado: $%,d".format(Locale("es", "CO"), total).replace(',', '.')
+        }
+
         if (CartRepository.items.isEmpty()) {
             val emptyMsg = TextView(requireContext()).apply {
                 text = "Tu carrito está vacío.\n\nExplora el Catálogo o las Categorías y agrega productos con el botón '🛒 Agregar al carrito'."
@@ -865,27 +1128,11 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 setPadding(0, 8, 0, 16)
             }
             container.addView(emptyMsg)
+            totalView.visibility = View.GONE
         } else {
-            val itemsContainer = LinearLayout(requireContext()).apply {
-                orientation = LinearLayout.VERTICAL
-            }
-
-            fun updateTotalPrice(totalView: TextView) {
-                var total = 0
-                CartRepository.items.filter { it.isSelected }.forEach { item ->
-                    val numericPrice = item.price.replace("$", "").replace(".", "").trim().toIntOrNull() ?: 0
-                    total += numericPrice
-                }
-                totalView.text = "Total seleccionado: $%,d".format(Locale("es", "CO"), total).replace(',', '.')
-            }
-
-            val totalView = TextView(requireContext()).apply {
-                textSize = 18f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor("#D84F52"))
-                setPadding(0, 8, 0, 16)
-            }
-            updateTotalPrice(totalView)
+            totalView.visibility = View.VISIBLE
+            updateTotalPrice()
+            container.addView(totalView)
 
             CartRepository.items.forEach { cartItem ->
                 val card = LinearLayout(requireContext()).apply {
@@ -905,13 +1152,25 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                     isChecked = cartItem.isSelected
                     setOnCheckedChangeListener { _, isChecked ->
                         cartItem.isSelected = isChecked
-                        updateTotalPrice(totalView)
+                        updateTotalPrice()
+                    }
+                }
+
+                val itemImg = ImageView(requireContext()).apply {
+                    layoutParams = LinearLayout.LayoutParams(75, 75).apply {
+                        marginEnd = 8
+                        marginStart = 4
+                    }
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    loadUrl(cartItem.imageUrl)
+                    setOnClickListener {
+                        showImageDialog(cartItem.imageUrl, cartItem.title)
                     }
                 }
 
                 val info = LinearLayout(requireContext()).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(8, 0, 8, 0)
+                    setPadding(4, 0, 4, 0)
                     layoutParams = LinearLayout.LayoutParams(
                         0,
                         LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -943,7 +1202,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                     setOnClickListener {
                         CartRepository.removeItem(cartItem)
                         Toast.makeText(requireContext(), "Producto eliminado", Toast.LENGTH_SHORT).show()
-                        renderCart()
+                        showOption("Carrito")
                     }
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -952,16 +1211,16 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 }
 
                 card.addView(checkBox)
+                card.addView(itemImg)
                 card.addView(info)
                 card.addView(deleteBtn)
                 itemsContainer.addView(card)
             }
 
-            container.addView(totalView)
             container.addView(itemsContainer)
         }
 
-        // Acciones de pago (Siempre visibles)
+        // Acciones rápidas
         val actionsTitle = TextView(requireContext()).apply {
             text = "Acciones rápidas"
             textSize = 18f
@@ -983,14 +1242,11 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             setBackgroundColor(Color.parseColor("#D84F52"))
             setTextColor(Color.WHITE)
             setOnClickListener {
-                val selectedCount = CartRepository.items.count { it.isSelected }
+                val selectedItems = CartRepository.items.filter { it.isSelected }
                 if (CartRepository.items.isEmpty()) {
                     statusText.text = "El carrito está vacío. Agrega productos para comprar."
-                } else if (selectedCount > 0) {
-                    statusText.text = "¡Compra confirmada de $selectedCount producto(s)!"
-                    Toast.makeText(requireContext(), "¡Compra realizada con éxito!", Toast.LENGTH_SHORT).show()
-                    CartRepository.clearSelected()
-                    renderCart()
+                } else if (selectedItems.isNotEmpty()) {
+                    showPaymentDialog(selectedItems)
                 } else {
                     statusText.text = "Por favor selecciona al menos un producto para comprar."
                 }
@@ -1009,7 +1265,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 val selectedItems = CartRepository.items.filter { it.isSelected }
                 if (selectedItems.isNotEmpty()) {
                     selectedItems.forEach { cartItem ->
-                        FavoritesRepository.addItem(FavoriteItem(cartItem.title, cartItem.price, cartItem.description))
+                        FavoritesRepository.addItem(FavoriteItem(cartItem.title, cartItem.price, cartItem.description, cartItem.imageUrl))
                     }
                     statusText.text = "¡${selectedItems.size} producto(s) guardado(s) en Favoritos!"
                     Toast.makeText(requireContext(), "¡Guardado en Favoritos!", Toast.LENGTH_SHORT).show()
@@ -1097,7 +1353,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
 
         if (FavoritesRepository.items.isEmpty()) {
             val emptyMsg = TextView(requireContext()).apply {
-                text = "No tienes productos guardados en favoritos.\n\nVe al Carrito, selecciona productos y presiona 'Guardar'."
+                text = "No tienes productos guardados en favoritos.\n\nVe al Catálogo o Categorías, y presiona '⭐ Agregar a favoritos'."
                 textSize = 15f
                 setTextColor(Color.parseColor("#666666"))
                 setPadding(0, 8, 0, 16)
@@ -1122,9 +1378,20 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                     }
                 }
 
+                val favImg = ImageView(requireContext()).apply {
+                    layoutParams = LinearLayout.LayoutParams(75, 75).apply {
+                        marginEnd = 8
+                    }
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    loadUrl(favItem.imageUrl)
+                    setOnClickListener {
+                        showImageDialog(favItem.imageUrl, favItem.title)
+                    }
+                }
+
                 val info = LinearLayout(requireContext()).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(8, 0, 8, 0)
+                    setPadding(4, 0, 4, 0)
                     layoutParams = LinearLayout.LayoutParams(
                         0,
                         LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -1156,7 +1423,9 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                     setOnClickListener {
                         FavoritesRepository.removeItem(favItem)
                         Toast.makeText(requireContext(), "Eliminado de favoritos", Toast.LENGTH_SHORT).show()
-                        renderFavorites()
+                        contentLayout.post {
+                            renderFavorites()
+                        }
                     }
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -1164,6 +1433,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                     )
                 }
 
+                card.addView(favImg)
                 card.addView(info)
                 card.addView(deleteBtn)
                 itemsContainer.addView(card)
@@ -1174,5 +1444,169 @@ class RightFragment : Fragment(R.layout.fragment_right) {
 
         scrollView.addView(container)
         contentLayout.addView(scrollView)
+    }
+
+    private fun showPaymentDialog(selectedItems: List<CartItem>) {
+        val dialog = Dialog(requireContext())
+        val scrollView = ScrollView(requireContext())
+        val layout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
+            setPadding(24, 24, 24, 24)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val title = TextView(requireContext()).apply {
+            text = "💳 Pasarela de Pago"
+            textSize = 20f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 0, 0, 16)
+        }
+        layout.addView(title)
+
+        // Tipo de Tarjeta
+        val typeLabel = TextView(requireContext()).apply {
+            text = "Tipo de Tarjeta:"
+            textSize = 14f
+            setTextColor(Color.parseColor("#333333"))
+        }
+        layout.addView(typeLabel)
+
+        val cardTypeGroup = RadioGroup(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 4, 0, 12)
+        }
+        val creditRadio = RadioButton(requireContext()).apply {
+            id = View.generateViewId()
+            text = "Crédito"
+            isChecked = true
+            setTextColor(Color.parseColor("#000000"))
+        }
+        val debitRadio = RadioButton(requireContext()).apply {
+            id = View.generateViewId()
+            text = "Débito / PSE"
+            setTextColor(Color.parseColor("#000000"))
+        }
+        cardTypeGroup.addView(creditRadio)
+        cardTypeGroup.addView(debitRadio)
+        layout.addView(cardTypeGroup)
+
+        // Franquicia / Banco
+        val franchiseLabel = TextView(requireContext()).apply {
+            text = "Franquicia / Banco:"
+            textSize = 14f
+            setTextColor(Color.parseColor("#333333"))
+        }
+        layout.addView(franchiseLabel)
+
+        val franchiseSpinner = Spinner(requireContext()).apply {
+            val franchises = arrayOf("Visa", "Mastercard", "American Express", "Diners Club", "Bancolombia (PSE)", "Davivienda (PSE)", "Nequi", "BBVA", "Banco de Bogotá")
+            adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, franchises)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 12 }
+        }
+        layout.addView(franchiseSpinner)
+
+        // Número de Tarjeta
+        val numInput = EditText(requireContext()).apply {
+            hint = "Número de Tarjeta / Cuenta"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setPadding(16, 16, 16, 16)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 8 }
+        }
+        layout.addView(numInput)
+
+        // Expiración y CVV
+        val expInput = EditText(requireContext()).apply {
+            hint = "MM/AA"
+            setPadding(16, 16, 16, 16)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val cvvInput = EditText(requireContext()).apply {
+            hint = "CVV"
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            setPadding(16, 16, 16, 16)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val rowLayout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 8 }
+        }
+        rowLayout.addView(expInput)
+        rowLayout.addView(cvvInput)
+        layout.addView(rowLayout)
+
+        // Nombre del Titular
+        val nameInput = EditText(requireContext()).apply {
+            hint = "Nombre del Titular"
+            setPadding(16, 16, 16, 16)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 8 }
+        }
+        layout.addView(nameInput)
+
+        // Cédula
+        val idInput = EditText(requireContext()).apply {
+            hint = "Cédula de Ciudadanía"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setPadding(16, 16, 16, 16)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 16 }
+        }
+        layout.addView(idInput)
+
+        // Botón Pagar
+        val payBtn = Button(requireContext()).apply {
+            text = "Confirmar y Pagar"
+            setBackgroundColor(Color.parseColor("#D84F52"))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                if (numInput.text.toString().isNotEmpty() && nameInput.text.toString().isNotEmpty()) {
+                    Toast.makeText(requireContext(), "¡Pago exitoso de ${selectedItems.size} producto(s)!", Toast.LENGTH_LONG).show()
+                    CartRepository.clearSelected()
+                    dialog.dismiss()
+                    showOption("Carrito")
+                } else {
+                    Toast.makeText(requireContext(), "Por favor completa los datos de pago", Toast.LENGTH_SHORT).show()
+                }
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 8 }
+        }
+        layout.addView(payBtn)
+
+        val cancelBtn = Button(requireContext()).apply {
+            text = "Cancelar"
+            setBackgroundColor(Color.parseColor("#777777"))
+            setTextColor(Color.WHITE)
+            setOnClickListener { dialog.dismiss() }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        layout.addView(cancelBtn)
+
+        scrollView.addView(layout)
+        dialog.setContentView(scrollView)
+        dialog.show()
     }
 }
