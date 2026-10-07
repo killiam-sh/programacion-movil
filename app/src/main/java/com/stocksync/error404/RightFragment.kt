@@ -8,7 +8,9 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
 import android.text.InputType
+import android.text.TextWatcher
 import android.text.method.ScrollingMovementMethod
 import android.view.Gravity
 import android.view.View
@@ -177,12 +179,9 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             setPadding(16, 16, 16, 16)
         }
 
-        // 1. Search Bar
-        val searchBox = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(16, 12, 16, 12)
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(Color.parseColor("#F2F4F7"))
+        // 1. Search Bar (Functional EditText with live suggestions)
+        val searchContainer = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -190,21 +189,137 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 bottomMargin = 16
             }
         }
+
+        val searchInputBox = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(12, 8, 12, 8)
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(Color.parseColor("#F2F4F7"))
+        }
+
         val searchIcon = TextView(requireContext()).apply {
             text = "🔍 "
             textSize = 16f
         }
-        val searchText = TextView(requireContext()).apply {
-            text = "Buscar productos, marcas o categorías"
+
+        val searchEditText = EditText(requireContext()).apply {
+            hint = "Buscar productos, marcas o categorías"
             textSize = 14f
-            setTextColor(Color.parseColor("#555555"))
+            setBackgroundColor(Color.TRANSPARENT)
+            setTextColor(Color.parseColor("#000000"))
+            setHintTextColor(Color.parseColor("#888888"))
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
         }
-        searchBox.addView(searchIcon)
-        searchBox.addView(searchText)
-        searchBox.setOnClickListener {
-            Toast.makeText(requireContext(), "Búsqueda seleccionada", Toast.LENGTH_SHORT).show()
+
+        searchInputBox.addView(searchIcon)
+        searchInputBox.addView(searchEditText)
+        searchContainer.addView(searchInputBox)
+
+        val suggestionsList = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
+            visibility = View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         }
-        mainContainer.addView(searchBox)
+        searchContainer.addView(suggestionsList)
+
+        val allSearchableItems = listOf(
+            "Smartwatch Pro" to "Electrónica",
+            "Audífonos X9" to "Electrónica",
+            "Laptop Aero" to "Electrónica",
+            "Cámara Mini" to "Electrónica",
+            "Gafas VR" to "Electrónica",
+            "Lámpara LED" to "Hogar",
+            "Cafetera" to "Hogar",
+            "Juego de Sábanas" to "Hogar",
+            "Chaqueta Denim" to "Moda",
+            "Tenis Urban" to "Moda",
+            "Gorra Sync" to "Moda",
+            "Balón de Fútbol Pro" to "Deportes",
+            "Raqueta de Tenis" to "Deportes",
+            "Guantes de Gym" to "Deportes",
+            "Smartphone Ultra 128GB" to "Destacados",
+            "Audífonos Inalámbricos Pro" to "Destacados",
+            "Categoría: Electrónica" to "Categoría",
+            "Categoría: Hogar" to "Categoría",
+            "Categoría: Moda" to "Categoría",
+            "Categoría: Deportes" to "Categoría"
+        )
+
+        searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s.toString().trim()
+                suggestionsList.removeAllViews()
+
+                if (query.isNotEmpty()) {
+                    val filtered = allSearchableItems.filter { it.first.contains(query, ignoreCase = true) }
+                    if (filtered.isNotEmpty()) {
+                        suggestionsList.visibility = View.VISIBLE
+                        filtered.forEach { (name, type) ->
+                            val itemLayout = LinearLayout(requireContext()).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                setPadding(16, 12, 16, 12)
+                                gravity = Gravity.CENTER_VERTICAL
+                                setBackgroundColor(Color.parseColor("#FAFAFA"))
+                                layoutParams = LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                ).apply {
+                                    bottomMargin = 2
+                                }
+                                setOnClickListener {
+                                    searchEditText.setText(name)
+                                    suggestionsList.visibility = View.GONE
+                                    if (type == "Categoría") {
+                                        showOption(name)
+                                    } else {
+                                        Toast.makeText(requireContext(), "Seleccionado: $name ($type)", Toast.LENGTH_SHORT).show()
+                                        showOption("Catálogo")
+                                    }
+                                }
+                            }
+                            val nameView = TextView(requireContext()).apply {
+                                text = name
+                                textSize = 14f
+                                typeface = Typeface.DEFAULT_BOLD
+                                setTextColor(Color.parseColor("#000000"))
+                                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                            }
+                            val typeView = TextView(requireContext()).apply {
+                                text = type
+                                textSize = 12f
+                                setTextColor(Color.parseColor("#D84F52"))
+                            }
+                            itemLayout.addView(nameView)
+                            itemLayout.addView(typeView)
+                            suggestionsList.addView(itemLayout)
+                        }
+                    } else {
+                        suggestionsList.visibility = View.VISIBLE
+                        val noResult = TextView(requireContext()).apply {
+                            text = "No se encontraron resultados"
+                            textSize = 14f
+                            setTextColor(Color.parseColor("#777777"))
+                            setPadding(16, 12, 16, 12)
+                        }
+                        suggestionsList.addView(noResult)
+                    }
+                } else {
+                    suggestionsList.visibility = View.GONE
+                }
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        mainContainer.addView(searchContainer)
 
         // 2. Offer Banner
         val bannerCard = LinearLayout(requireContext()).apply {
