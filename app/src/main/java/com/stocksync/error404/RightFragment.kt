@@ -1,11 +1,13 @@
 package com.stocksync.error404
 
+import android.app.DatePickerDialog
 import android.app.Dialog
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -42,6 +44,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 class RightFragment : Fragment(R.layout.fragment_right) {
@@ -52,6 +56,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
     private var webView: WebView? = null
 
     private var isLoggedIn = false
+    private var isGuestMode = false
     private var userAddress = "Calle 100 # 15-20, Apto 402, Bogotá D.C."
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -149,7 +154,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
     fun showOption(option: String) {
         if (!::contentLayout.isInitialized) return
 
-        if (!isLoggedIn) {
+        if (!isLoggedIn && !isGuestMode) {
             (activity as? MainActivity)?.setSidebarVisible(false)
             releaseMedia()
             contentLayout.removeAllViews()
@@ -157,7 +162,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             return
         }
 
-        (activity as? MainActivity)?.setSidebarVisible(true)
+        (activity as? MainActivity)?.setSidebarVisible(!isGuestMode)
         releaseMedia()
         contentLayout.removeAllViews()
 
@@ -1166,6 +1171,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             setTextColor(Color.WHITE)
             setOnClickListener {
                 isLoggedIn = false
+                isGuestMode = false
                 Toast.makeText(requireContext(), "Sesión cerrada. ¡Vuelve pronto a StockSale!", Toast.LENGTH_LONG).show()
                 showOption("Mi Cuenta")
             }
@@ -1272,12 +1278,12 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         demoHintCard.addView(hintDesc)
 
         val emailInput = EditText(requireContext()).apply {
-            hint = "Correo Electrónico"
+            hint = "Correo o usuario"
             setText("camila.lopez2024@gmail.com")
             inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.parseColor("#AAAAAA"))
-            setBackgroundColor(Color.parseColor("#0C2D3A"))
+            setTextColor(Color.parseColor("#000000"))
+            setHintTextColor(Color.parseColor("#777777"))
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
             setPadding(16, 16, 16, 16)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1289,14 +1295,14 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             hint = "Contraseña"
             setText("123456")
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.parseColor("#AAAAAA"))
-            setBackgroundColor(Color.parseColor("#0C2D3A"))
+            setTextColor(Color.parseColor("#000000"))
+            setHintTextColor(Color.parseColor("#777777"))
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
             setPadding(16, 16, 16, 16)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = 20 }
+            ).apply { bottomMargin = 16 }
         }
 
         val loginBtn = Button(requireContext()).apply {
@@ -1310,6 +1316,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 val pass = passwordInput.text.toString().trim()
                 if (email.isNotEmpty() && pass.isNotEmpty()) {
                     isLoggedIn = true
+                    isGuestMode = false
                     (activity as? MainActivity)?.setSidebarVisible(true)
                     Toast.makeText(requireContext(), "¡Bienvenida de nuevo, Camila!", Toast.LENGTH_SHORT).show()
                     showOption("Inicio")
@@ -1323,22 +1330,253 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             )
         }
 
+        val accountActions = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = 12 }
+        }
+
+        val registerBtn = Button(requireContext()).apply {
+            text = "REGISTRARSE"
+            textSize = 14f
+            setBackgroundColor(Color.parseColor("#2B8FA0"))
+            setTextColor(Color.WHITE)
+            setOnClickListener { showRegistrationDialog() }
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                rightMargin = 6
+            }
+        }
+
+        val forgotBtn = Button(requireContext()).apply {
+            text = "¿Olvidaste tu contraseña?"
+            textSize = 12f
+            setTextColor(Color.parseColor("#D84F52"))
+            setBackgroundColor(Color.WHITE)
+            setPadding(12, 4, 12, 4)
+            setOnClickListener {
+                Toast.makeText(requireContext(), "Te enviaremos instrucciones al correo registrado.", Toast.LENGTH_SHORT).show()
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 4
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+        }
+
+        val catalogBtn = Button(requireContext()).apply {
+            text = "VER CATÁLOGO"
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setBackgroundColor(Color.parseColor("#2B8FA0"))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                isGuestMode = true
+                isLoggedIn = false
+                (activity as? MainActivity)?.setSidebarVisible(false)
+                showOption("Catálogo")
+            }
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                leftMargin = 6
+            }
+        }
+
         container.addView(title)
         container.addView(demoHintCard)
         container.addView(emailInput)
         container.addView(passwordInput)
         container.addView(loginBtn)
+        container.addView(accountActions)
+        accountActions.addView(registerBtn)
+        accountActions.addView(catalogBtn)
+        container.addView(forgotBtn)
 
         scrollView.addView(container)
         rootFrameLayout.addView(scrollView)
         contentLayout.addView(rootFrameLayout)
     }
 
+    private fun showRegistrationDialog() {
+        val dialog = Dialog(requireContext())
+        val density = resources.displayMetrics.density
+        fun dp(value: Int): Int = (value * density).toInt()
+
+        val formContainer = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(22), dp(24), dp(18))
+            setBackgroundColor(Color.WHITE)
+        }
+        val scrollView = ScrollView(requireContext()).apply {
+            addView(formContainer)
+        }
+
+        val title = TextView(requireContext()).apply {
+            text = "Registro de Usuario"
+            textSize = 22f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.BLACK)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(14) }
+        }
+        formContainer.addView(title)
+
+        fun field(hintText: String, type: Int = InputType.TYPE_CLASS_TEXT): EditText {
+            return EditText(requireContext()).apply {
+                hint = hintText
+                inputType = type
+                isSingleLine = true
+                setTextColor(Color.DKGRAY)
+                setHintTextColor(Color.parseColor("#607080"))
+                setPadding(dp(16), 0, dp(16), 0)
+                background = GradientDrawable().apply {
+                    setColor(Color.WHITE)
+                    setStroke(1, Color.parseColor("#D2D9E0"))
+                    cornerRadius = 8f
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(64)
+                ).apply { bottomMargin = dp(12) }
+            }
+        }
+
+        val firstName = field("Nombres")
+        val lastName = field("Apellidos")
+        val idNumber = field("Cédula", InputType.TYPE_CLASS_NUMBER)
+        val birthDateLabel = TextView(requireContext()).apply {
+            text = "Fecha de Nacimiento"
+            textSize = 16f
+            setTextColor(Color.parseColor("#102A43"))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(6) }
+        }
+        val birthDate = field("dd/mm/aaaa").apply {
+            isFocusable = false
+            isClickable = true
+            setCompoundDrawablesWithIntrinsicBounds(0, 0, android.R.drawable.ic_menu_my_calendar, 0)
+        }
+        val phone = field("Teléfono (Ej: 3001234567 o +573001234567)", InputType.TYPE_CLASS_PHONE)
+        val email = field("Correo Electrónico", InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
+        val username = field("Nombre de Usuario")
+        val password = field("Contraseña", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+
+        birthDate.setOnClickListener {
+            val calendar = Calendar.getInstance()
+            DatePickerDialog(
+                requireContext(),
+                { _, year, month, day ->
+                    val selected = Calendar.getInstance().apply { set(year, month, day) }
+                    birthDate.setText(SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(selected.time))
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            ).apply {
+                datePicker.maxDate = System.currentTimeMillis()
+            }.show()
+        }
+
+        formContainer.addView(firstName)
+        formContainer.addView(lastName)
+        formContainer.addView(idNumber)
+        formContainer.addView(birthDateLabel)
+        formContainer.addView(birthDate)
+        listOf(phone, email, username, password).forEach(formContainer::addView)
+
+        val actions = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END
+        }
+        val cancel = Button(requireContext()).apply {
+            text = "Cancelar"
+            setTextColor(Color.parseColor("#607080"))
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                setStroke(1, Color.parseColor("#607080"))
+                cornerRadius = 8f
+            }
+            setOnClickListener { dialog.dismiss() }
+        }
+        val register = Button(requireContext()).apply {
+            text = "Registrar"
+            setBackgroundColor(Color.parseColor("#159B68"))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                val required = listOf(firstName, lastName, idNumber, birthDate, phone, email, username, password)
+                if (required.any { it.text.toString().trim().isEmpty() }) {
+                    Toast.makeText(requireContext(), "Completa todos los campos.", Toast.LENGTH_SHORT).show()
+                } else {
+                    dialog.dismiss()
+                    Toast.makeText(requireContext(), "Registro creado correctamente.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        actions.addView(cancel)
+        actions.addView(register)
+        formContainer.addView(actions)
+
+        dialog.setContentView(scrollView)
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.94).toInt(),
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+    }
+
     private fun renderPhotos() {
-        val scrollView = ScrollView(requireContext())
+        val catalogLayout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        val scrollView = ScrollView(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        }
         val container = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16, 16, 16, 16)
+        }
+
+        if (isGuestMode) {
+            val backToLoginBtn = Button(requireContext()).apply {
+                text = "Volver"
+                textSize = 12f
+                setTextColor(Color.WHITE)
+                setBackgroundColor(Color.parseColor("#D84F52"))
+                setPadding(10, 2, 10, 2)
+                setOnClickListener {
+                    isGuestMode = false
+                    showOption("Inicio")
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    gravity = Gravity.START
+                    leftMargin = 8
+                    topMargin = 6
+                    bottomMargin = 2
+                }
+            }
+            catalogLayout.addView(backToLoginBtn)
         }
 
         val titleView = TextView(requireContext()).apply {
@@ -1428,6 +1666,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 ).apply {
                     topMargin = 8
                 }
+                visibility = if (isGuestMode) View.GONE else View.VISIBLE
             }
 
             val favBtn = Button(requireContext()).apply {
@@ -1445,6 +1684,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 ).apply {
                     topMargin = 6
                 }
+                visibility = if (isGuestMode) View.GONE else View.VISIBLE
             }
 
             card.addView(imageView)
@@ -1457,7 +1697,8 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         }
 
         scrollView.addView(container)
-        contentLayout.addView(scrollView)
+        catalogLayout.addView(scrollView)
+        contentLayout.addView(catalogLayout)
     }
 
     private fun renderVideo() {
