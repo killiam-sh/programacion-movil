@@ -23,6 +23,7 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.MediaController
@@ -49,6 +50,9 @@ class RightFragment : Fragment(R.layout.fragment_right) {
 
     private var videoView: VideoView? = null
     private var webView: WebView? = null
+
+    private var isLoggedIn = false
+    private var userAddress = "Calle 100 # 15-20, Apto 402, Bogotá D.C."
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -145,6 +149,15 @@ class RightFragment : Fragment(R.layout.fragment_right) {
     fun showOption(option: String) {
         if (!::contentLayout.isInitialized) return
 
+        if (!isLoggedIn) {
+            (activity as? MainActivity)?.setSidebarVisible(false)
+            releaseMedia()
+            contentLayout.removeAllViews()
+            renderLogin()
+            return
+        }
+
+        (activity as? MainActivity)?.setSidebarVisible(true)
         releaseMedia()
         contentLayout.removeAllViews()
 
@@ -486,7 +499,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         }
 
         val products = listOf(
-            Triple("Smartphone Ultra 128GB", "$249.990", "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&q=80"),
+            Triple("Smartphone Ultra 128GB", "$949.990", "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&q=80"),
             Triple("Audífonos Inalámbricos Pro", "$89.990", "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80")
         )
 
@@ -522,6 +535,9 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.parseColor("#000000"))
                 maxLines = 2
+                setOnClickListener {
+                    showImageDialog(imageUrl, name)
+                }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -532,6 +548,9 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             val priceRow = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
+                setOnClickListener {
+                    showImageDialog(imageUrl, name)
+                }
             }
             val pPrice = TextView(requireContext()).apply {
                 text = price
@@ -725,6 +744,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
 
         val products = when (category) {
             "Electrónica" -> listOf(
+                ProductData("Smartphone Ultra 128GB", "$949.990", "Smartphone con pantalla AMOLED y 128GB de memoria.", "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&q=80"),
                 ProductData("Smartwatch Pro", "$450.000", "Reloj inteligente para entrenamientos y notificaciones.", "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80"),
                 ProductData("Audífonos X9", "$120.000", "Sonido premium con batería de larga duración.", "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80"),
                 ProductData("Laptop Aero", "$1.800.000", "Portátil ligera para estudio y trabajo diario.", "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&q=80"),
@@ -862,28 +882,12 @@ class RightFragment : Fragment(R.layout.fragment_right) {
     }
 
     private fun renderProfile() {
-        val profileText = TextView(requireContext()).apply {
-            text = "Nombre: Camila López\n\n" +
-                "Estudios: Ingeniería de Sistemas - Politécnico Grancolombiano\n\n" +
-                "Experiencia: 5 años en analítica comercial y atención al cliente\n\n" +
-                "Especialidad: e-commerce, marketing digital y atención personalizada\n\n" +
-                "Perfil profesional: Apasionada por crear experiencias de compra intuitivas, " +
-                "rápidas y seguras para clientes que buscan productos con valor y confianza. " +
-                "Su enfoque combina tecnología, servicio y estrategia para ofrecer una mejor " +
-                "atención digital.\n\n" +
-                "Habilidades: atención al cliente, ventas, investigación de mercado, " +
-                "diseño de contenido, analítica y gestión de campañas."
-            textSize = 16f
-            setTextColor(Color.parseColor("#000000"))
-            setPadding(16, 16, 16, 16)
-            movementMethod = ScrollingMovementMethod()
-        }
-
         val scrollView = ScrollView(requireContext()).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
             )
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
         }
 
         val container = LinearLayout(requireContext()).apply {
@@ -891,9 +895,432 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             setPadding(16, 16, 16, 16)
         }
 
-        container.addView(profileText)
+        // Título de la sección
+        val title = TextView(requireContext()).apply {
+            text = "👤 Mi Cuenta"
+            textSize = 22f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 0, 0, 16)
+        }
+        container.addView(title)
+
+        // 1. Tarjeta de Perfil del Cliente
+        val profileCard = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(16, 16, 16, 16)
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(Color.parseColor("#F2F4F7"))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 20 }
+        }
+
+        val avatar = ImageView(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(70, 70).apply {
+                marginEnd = 16
+            }
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            loadUrl("https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&q=80")
+            setOnClickListener {
+                showImageDialog("https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&q=80", "Foto de Perfil - Camila López")
+            }
+        }
+
+        val profileInfo = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val nameView = TextView(requireContext()).apply {
+            text = "Camila López"
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+        }
+
+        val emailView = TextView(requireContext()).apply {
+            text = "camila.lopez2024@gmail.com"
+            textSize = 13f
+            setTextColor(Color.parseColor("#555555"))
+        }
+
+        val phoneView = TextView(requireContext()).apply {
+            text = "+57 300 123 4567"
+            textSize = 13f
+            setTextColor(Color.parseColor("#555555"))
+        }
+
+        val vipBadge = TextView(requireContext()).apply {
+            text = "⭐ Cliente VIP StockSale"
+            textSize = 12f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#D84F52"))
+            setPadding(0, 4, 0, 0)
+        }
+
+        profileInfo.addView(nameView)
+        profileInfo.addView(emailView)
+        profileInfo.addView(phoneView)
+        profileInfo.addView(vipBadge)
+
+        profileCard.addView(avatar)
+        profileCard.addView(profileInfo)
+        container.addView(profileCard)
+
+        // 2. Historial de Compras
+        val ordersTitle = TextView(requireContext()).apply {
+            text = "📦 Mis Compras Recientes"
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 8, 0, 12)
+        }
+        container.addView(ordersTitle)
+
+        data class Order(val id: String, val items: String, val total: String, val status: String)
+        val orders = listOf(
+            Order("#1042", "Smartwatch Pro, Audífonos X9", "$570.000", "🚚 En camino (Llega mañana)"),
+            Order("#1038", "Chaqueta Denim", "$120.000", "✅ Entregado")
+        )
+
+        orders.forEach { order ->
+            val orderCard = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(12, 12, 12, 12)
+                setBackgroundColor(Color.parseColor("#F2F4F7"))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = 10 }
+            }
+
+            val orderHeader = TextView(requireContext()).apply {
+                text = "Pedido ${order.id} - ${order.total}"
+                typeface = Typeface.DEFAULT_BOLD
+                textSize = 15f
+                setTextColor(Color.parseColor("#000000"))
+            }
+
+            val orderItems = TextView(requireContext()).apply {
+                text = order.items
+                textSize = 13f
+                setTextColor(Color.parseColor("#555555"))
+            }
+
+            val orderStatus = TextView(requireContext()).apply {
+                text = order.status
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#2B8FA0"))
+                setPadding(0, 4, 0, 0)
+            }
+
+            orderCard.addView(orderHeader)
+            orderCard.addView(orderItems)
+            orderCard.addView(orderStatus)
+            container.addView(orderCard)
+        }
+
+        // 3. Dirección de Envío
+        val addressTitle = TextView(requireContext()).apply {
+            text = "📍 Dirección de Envío Principal"
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 16, 0, 12)
+        }
+        container.addView(addressTitle)
+
+        val addressCard = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12, 12, 12, 12)
+            setBackgroundColor(Color.parseColor("#F2F4F7"))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 20 }
+        }
+
+        val addressText = TextView(requireContext()).apply {
+            text = userAddress
+            textSize = 14f
+            setTextColor(Color.parseColor("#000000"))
+        }
+
+        val editAddressBtn = Button(requireContext()).apply {
+            text = "✏️ Editar Dirección"
+            textSize = 12f
+            setBackgroundColor(Color.parseColor("#2B8FA0"))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                val dialog = Dialog(requireContext())
+                val dLayout = LinearLayout(requireContext()).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(24, 24, 24, 24)
+                    setBackgroundColor(Color.WHITE)
+                }
+                val dTitle = TextView(requireContext()).apply {
+                    text = "✏️ Editar Dirección de Envío"
+                    textSize = 18f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(Color.BLACK)
+                    setPadding(0, 0, 0, 12)
+                }
+                val input = EditText(requireContext()).apply {
+                    setText(userAddress)
+                    setPadding(16, 16, 16, 16)
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { bottomMargin = 12 }
+                }
+                val saveAddressBtn = Button(requireContext()).apply {
+                    text = "Guardar Nueva Dirección"
+                    setBackgroundColor(Color.parseColor("#2B8FA0"))
+                    setTextColor(Color.WHITE)
+                    setOnClickListener {
+                        val newAddress = input.text.toString().trim()
+                        if (newAddress.isNotEmpty()) {
+                            userAddress = newAddress
+                            Toast.makeText(requireContext(), "¡Dirección actualizada con éxito!", Toast.LENGTH_SHORT).show()
+                            dialog.dismiss()
+                            showOption("Mi Cuenta")
+                        }
+                    }
+                }
+                dLayout.addView(dTitle)
+                dLayout.addView(input)
+                dLayout.addView(saveAddressBtn)
+                dialog.setContentView(dLayout)
+                dialog.show()
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = 8 }
+        }
+
+        addressCard.addView(addressText)
+        addressCard.addView(editAddressBtn)
+        container.addView(addressCard)
+
+        // 4. Soporte y Atención al Cliente StockSale
+        val supportTitle = TextView(requireContext()).apply {
+            text = "🎧 Soporte y Atención StockSale"
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            setPadding(0, 8, 0, 12)
+        }
+        container.addView(supportTitle)
+
+        val whatsappBtn = Button(requireContext()).apply {
+            text = "💬 Chat de Soporte por WhatsApp"
+            setBackgroundColor(Color.parseColor("#25D366"))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                val url = "https://wa.me/573001234567?text=Hola%20Soporte%20StockSale%2C%20necesito%20ayuda"
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), "Conectando con Soporte StockSale por WhatsApp...", Toast.LENGTH_SHORT).show()
+                }
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 8 }
+        }
+
+        val emailSupportBtn = Button(requireContext()).apply {
+            text = "📧 Correo: soporte@stocksale.com"
+            setBackgroundColor(Color.parseColor("#0B1F2A"))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                val intent = Intent(Intent.ACTION_SENDTO).apply {
+                    data = Uri.parse("mailto:soporte@stocksale.com")
+                    putExtra(Intent.EXTRA_SUBJECT, "Soporte StockSale - Ayuda con mi cuenta")
+                }
+                try {
+                    startActivity(Intent.createChooser(intent, "Enviar correo a Soporte"))
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), "Correo de ayuda: soporte@stocksale.com", Toast.LENGTH_SHORT).show()
+                }
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 20 }
+        }
+
+        container.addView(whatsappBtn)
+        container.addView(emailSupportBtn)
+
+        // 5. Cerrar Sesión
+        val logoutBtn = Button(requireContext()).apply {
+            text = "🚪 Cerrar Sesión"
+            setBackgroundColor(Color.parseColor("#D84F52"))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                isLoggedIn = false
+                Toast.makeText(requireContext(), "Sesión cerrada. ¡Vuelve pronto a StockSale!", Toast.LENGTH_LONG).show()
+                showOption("Mi Cuenta")
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        container.addView(logoutBtn)
+
         scrollView.addView(container)
         contentLayout.addView(scrollView)
+    }
+
+    private fun renderLogin() {
+        if (!::contentLayout.isInitialized) return
+        (activity as? MainActivity)?.setSidebarVisible(false)
+        contentLayout.removeAllViews()
+
+        val rootFrameLayout = FrameLayout(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        // Logo de fondo del proyecto
+        val bgLogoView = ImageView(requireContext()).apply {
+            setImageResource(R.drawable.stocksale_logo)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            alpha = 0.15f
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+        rootFrameLayout.addView(bgLogoView)
+
+        val scrollView = ScrollView(requireContext()).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(24, 32, 24, 32)
+        }
+
+        val logoImage = ImageView(requireContext()).apply {
+            setImageResource(R.drawable.stocksale_logo)
+            adjustViewBounds = true
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                140
+            ).apply { bottomMargin = 20 }
+        }
+
+        val title = TextView(requireContext()).apply {
+            text = "Iniciar Sesión - StockSale"
+            textSize = 20f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#000000"))
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 12 }
+        }
+
+        val demoHintCard = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12, 10, 12, 10)
+            setBackgroundColor(Color.parseColor("#F2F4F7"))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 20 }
+        }
+
+        val hintTitle = TextView(requireContext()).apply {
+            text = "🔑 Credenciales Demo:"
+            textSize = 12f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#D84F52"))
+        }
+
+        val hintDesc = TextView(requireContext()).apply {
+            text = "Correo: camila.lopez2024@gmail.com\nContraseña: 123456"
+            textSize = 12f
+            setTextColor(Color.parseColor("#444444"))
+        }
+
+        demoHintCard.addView(hintTitle)
+        demoHintCard.addView(hintDesc)
+
+        val emailInput = EditText(requireContext()).apply {
+            hint = "Correo Electrónico"
+            setText("camila.lopez2024@gmail.com")
+            inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            setPadding(16, 16, 16, 16)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 12 }
+        }
+
+        val passwordInput = EditText(requireContext()).apply {
+            hint = "Contraseña"
+            setText("123456")
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setPadding(16, 16, 16, 16)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 20 }
+        }
+
+        val loginBtn = Button(requireContext()).apply {
+            text = "INICIAR SESIÓN"
+            textSize = 15f
+            typeface = Typeface.DEFAULT_BOLD
+            setBackgroundColor(Color.parseColor("#D84F52"))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                val email = emailInput.text.toString().trim()
+                val pass = passwordInput.text.toString().trim()
+                if (email.isNotEmpty() && pass.isNotEmpty()) {
+                    isLoggedIn = true
+                    (activity as? MainActivity)?.setSidebarVisible(true)
+                    Toast.makeText(requireContext(), "¡Bienvenida de nuevo, Camila!", Toast.LENGTH_SHORT).show()
+                    showOption("Inicio")
+                } else {
+                    Toast.makeText(requireContext(), "Por favor ingresa correo y contraseña", Toast.LENGTH_SHORT).show()
+                }
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        container.addView(logoImage)
+        container.addView(title)
+        container.addView(demoHintCard)
+        container.addView(emailInput)
+        container.addView(passwordInput)
+        container.addView(loginBtn)
+
+        scrollView.addView(container)
+        rootFrameLayout.addView(scrollView)
+        contentLayout.addView(rootFrameLayout)
     }
 
     private fun renderPhotos() {
@@ -913,6 +1340,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         container.addView(titleView)
 
         val allProducts = listOf(
+            ProductData("Smartphone Ultra 128GB", "$949.990", "Smartphone con pantalla AMOLED y 128GB de memoria.", "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&q=80"),
             ProductData("Smartwatch Pro", "$450.000", "Reloj inteligente para entrenamientos y notificaciones.", "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80"),
             ProductData("Audífonos X9", "$120.000", "Sonido premium con batería de larga duración.", "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80"),
             ProductData("Laptop Aero", "$1.800.000", "Portátil ligera para estudio y trabajo diario.", "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&q=80"),

@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "StockSync"
+rootProject.name = "StockSale"
 include(":app")
  
