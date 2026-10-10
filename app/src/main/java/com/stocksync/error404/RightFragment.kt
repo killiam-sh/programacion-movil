@@ -1190,19 +1190,30 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
             )
+            setBackgroundColor(Color.parseColor("#062E38"))
         }
 
-        // Logo de fondo del proyecto
+        // Logo de fondo a VIVO COLOR (alpha = 1.0)
         val bgLogoView = ImageView(requireContext()).apply {
             setImageResource(R.drawable.stocksale_logo)
             scaleType = ImageView.ScaleType.FIT_CENTER
-            alpha = 0.15f
+            alpha = 1.0f
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
         }
         rootFrameLayout.addView(bgLogoView)
+
+        // Overlay semitransparente para legibilidad
+        val overlay = View(requireContext()).apply {
+            setBackgroundColor(Color.parseColor("#88031F2E"))
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+        rootFrameLayout.addView(overlay)
 
         val scrollView = ScrollView(requireContext()).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -1214,35 +1225,25 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         val container = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(24, 32, 24, 32)
-        }
-
-        val logoImage = ImageView(requireContext()).apply {
-            setImageResource(R.drawable.stocksale_logo)
-            adjustViewBounds = true
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                140
-            ).apply { bottomMargin = 20 }
+            setPadding(24, 48, 24, 32)
         }
 
         val title = TextView(requireContext()).apply {
             text = "Iniciar Sesión - StockSale"
-            textSize = 20f
+            textSize = 22f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#000000"))
+            setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = 12 }
+            ).apply { bottomMargin = 16 }
         }
 
         val demoHintCard = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(12, 10, 12, 10)
-            setBackgroundColor(Color.parseColor("#F2F4F7"))
+            setPadding(16, 12, 16, 12)
+            setBackgroundColor(Color.parseColor("#0C2D3A"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -1251,15 +1252,20 @@ class RightFragment : Fragment(R.layout.fragment_right) {
 
         val hintTitle = TextView(requireContext()).apply {
             text = "🔑 Credenciales Demo:"
-            textSize = 12f
+            textSize = 13f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#D84F52"))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 4 }
         }
 
         val hintDesc = TextView(requireContext()).apply {
             text = "Correo: camila.lopez2024@gmail.com\nContraseña: 123456"
-            textSize = 12f
-            setTextColor(Color.parseColor("#444444"))
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
         }
 
         demoHintCard.addView(hintTitle)
@@ -1269,6 +1275,9 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             hint = "Correo Electrónico"
             setText("camila.lopez2024@gmail.com")
             inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.parseColor("#AAAAAA"))
+            setBackgroundColor(Color.parseColor("#0C2D3A"))
             setPadding(16, 16, 16, 16)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1280,6 +1289,9 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             hint = "Contraseña"
             setText("123456")
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.parseColor("#AAAAAA"))
+            setBackgroundColor(Color.parseColor("#0C2D3A"))
             setPadding(16, 16, 16, 16)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1311,7 +1323,6 @@ class RightFragment : Fragment(R.layout.fragment_right) {
             )
         }
 
-        container.addView(logoImage)
         container.addView(title)
         container.addView(demoHintCard)
         container.addView(emailInput)
