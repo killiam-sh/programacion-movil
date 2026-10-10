@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.api.BaseVariantOutputImpl
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -32,6 +34,14 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+    }
+
+    applicationVariants.all {
+        val variant = this
+        variant.outputs.all {
+            val output = this as BaseVariantOutputImpl
+            output.outputFileName = "StockSale-${variant.name}.apk"
+        }
     }
 }
 
