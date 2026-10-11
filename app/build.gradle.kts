@@ -40,7 +40,7 @@ android {
         val variant = this
         variant.outputs.all {
             val output = this as BaseVariantOutputImpl
-            output.outputFileName = "StockSale-${variant.name}.apk"
+            output.outputFileName = "StockSale.apk"
         }
     }
 }
