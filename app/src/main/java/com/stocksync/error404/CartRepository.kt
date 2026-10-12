@@ -3,12 +3,12 @@ package com.stocksync.error404
 import java.util.UUID
 
 data class CartItem(
-    val id: String = UUID.randomUUID().toString(),
     val title: String,
     val price: String,
     val description: String,
     val imageUrl: String = "",
-    var isSelected: Boolean = true
+    var isSelected: Boolean = true,
+    val id: String = UUID.randomUUID().toString()
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

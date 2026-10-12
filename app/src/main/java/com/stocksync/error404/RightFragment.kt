@@ -44,6 +44,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -66,12 +68,15 @@ class RightFragment : Fragment(R.layout.fragment_right) {
     }
 
     private fun ImageView.loadUrl(urlString: String) {
-        setImageResource(android.R.drawable.ic_menu_gallery)
+        setBackgroundColor(Color.parseColor("#E0E0E0"))
         if (urlString.isEmpty()) return
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val url = URL(urlString)
                 val connection = url.openConnection() as HttpURLConnection
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0")
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
                 connection.doInput = true
                 connection.connect()
                 val input = connection.inputStream
@@ -79,6 +84,7 @@ class RightFragment : Fragment(R.layout.fragment_right) {
                 withContext(Dispatchers.Main) {
                     if (bitmap != null) {
                         setImageBitmap(bitmap)
+                        setBackgroundColor(Color.TRANSPARENT)
                     }
                 }
             } catch (e: Exception) {
@@ -1907,12 +1913,16 @@ class RightFragment : Fragment(R.layout.fragment_right) {
         }
 
         fun updateTotalPrice() {
-            var total = 0
+            var total = 0L
             CartRepository.items.filter { it.isSelected }.forEach { item ->
-                val numericPrice = item.price.replace("$", "").replace(".", "").trim().toIntOrNull() ?: 0
+                val digits = item.price.filter { it.isDigit() }
+                val numericPrice = digits.toLongOrNull() ?: 0L
                 total += numericPrice
             }
-            totalView.text = "Total seleccionado: $%,d".format(Locale("es", "CO"), total).replace(',', '.')
+            val formattedTotal = DecimalFormat("#,###", DecimalFormatSymbols(Locale("es", "CO")).apply {
+                groupingSeparator = '.'
+            }).format(total)
+            totalView.text = "Total seleccionado: \$$formattedTotal"
         }
 
         if (CartRepository.items.isEmpty()) {
